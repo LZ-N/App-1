@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Ascend — Habit Quest</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12160F">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#12160F;
+    --surface:#1B2117;
+    --surface-2:#212A1B;
+    --surface-3:#28321F;
+    --border:#2E3626;
+    --border-soft:#242C1D;
+    --text:#EDE8DC;
+    --text-muted:#9A9C8E;
+    --text-faint:#6B6F5F;
+    --gold:#C9A227;
+    --gold-soft:#E0C468;
+    --sage:#7FA872;
+    --sage-soft:#A8CC9C;
+    --peri:#8E97C9;
+    --peri-soft:#B0B7DE;
+    --brick:#B3524B;
+    --brick-soft:#D07A73;
+    --font-display:Georgia,'Iowan Old Style','Times New Roman',serif;
+    --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,'SF Mono','Roboto Mono',Consolas,monospace;
+    --radius:10px;
+    --radius-lg:16px;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  #app{max-width:720px;margin:0 auto;padding:20px 16px 80px;}
+  #loading{padding:60px 20px;text-align:center;color:var(--text-muted);font-family:var(--font-display);font-size:18px;}
+  a{color:var(--gold-soft);}
+  button{font-family:inherit;}
+  ::selection{background:var(--gold);color:#1a1a12;}
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:0.01ms !important;transition-duration:0.01ms !important;}
+  }
+
+  /* ===== Header / HUD ===== */
+  .hud{
+    background:linear-gradient(180deg,var(--surface) 0%,var(--surface-2) 100%);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:18px 20px;
+    margin-bottom:18px;
+  }
+  .hud-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .wordmark{font-family:var(--font-display);font-size:15px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold-soft);font-weight:400;}
+  .icon-btn{
+    background:transparent;border:1px solid var(--border);color:var(--text-muted);
+    border-radius:8px;padding:6px 10px;font-size:12px;letter-spacing:0.04em;cursor:pointer;
+    transition:border-color .15s,color .15s;
+  }
+  .icon-btn:hover{border-color:var(--gold);color:var(--gold-soft);}
+  .hud-main{display:flex;gap:16px;align-items:center;}
+  .glyph-wrap{
+    width:64px;height:64px;flex:none;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);border:1px solid var(--border);border-radius:50%;
+  }
+  .glyph-wrap svg{width:40px;height:40px;filter:drop-shadow(0 0 6px rgba(201,162,39,.35));}
+  .hud-info{flex:1;min-width:0;}
+  .level-row{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+  .level-num{font-family:var(--font-display);font-size:22px;color:var(--text);}
+  .level-tier{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;}
+  .xp-bar-track{background:var(--bg);border:1px solid var(--border);border-radius:99px;height:8px;overflow:hidden;}
+  .xp-bar-fill{background:linear-gradient(90deg,var(--gold) 0%,var(--gold-soft) 100%);height:100%;border-radius:99px;transition:width .5s ease;}
+  .xp-label{font-size:11px;color:var(--text-faint);margin-top:4px;font-variant-numeric:tabular-nums;}
+  .hud-stats{display:flex;gap:18px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-soft);flex-wrap:wrap;}
+  .hud-stat{display:flex;flex-direction:column;gap:2px;}
+  .hud-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint);}
+  .hud-stat-val{font-family:var(--font-display);font-size:18px;font-variant-numeric:tabular-nums;}
+  .c-gold{color:var(--gold-soft);}
+  .c-sage{color:var(--sage-soft);}
+  .c-peri{color:var(--peri-soft);}
+  .c-brick{color:var(--brick-soft);}
+
+  /* ===== Tabs ===== */
+  .tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--border);margin-bottom:18px;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{
+    background:transparent;border:none;color:var(--text-muted);padding:10px 12px;font-size:12.5px;
+    text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;
+  }
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--gold-soft);border-bottom-color:var(--gold);}
+  .tab-btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+    outline:2px solid var(--gold-soft);outline-offset:2px;
+  }
+
+  /* ===== Cards / ledger entries ===== */
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:10px;
+  }
+  .eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text-faint);margin-bottom:6px;display:block;}
+  .section-title{font-family:var(--font-display);font-size:19px;margin:0 0 12px;color:var(--text);}
+  .row{display:flex;align-items:center;gap:10px;}
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .stack{display:flex;flex-direction:column;gap:10px;}
+  .muted{color:var(--text-muted);}
+  .faint{color:var(--text-faint);font-size:12.5px;}
+  .empty{padding:22px 10px;text-align:center;color:var(--text-faint);font-size:13.5px;border:1px dashed var(--border);border-radius:var(--radius);}
+
+  /* buttons */
+  .btn{
+    font-size:13px;padding:9px 14px;border-radius:8px;border:1px solid var(--border);
+    background:var(--surface-2);color:var(--text);cursor:pointer;transition:all .15s;
+  }
+  .btn:hover{border-color:var(--text-muted);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-primary{background:var(--gold);border-color:var(--gold);color:#1a1608;font-weight:600;}
+  .btn-primary:hover{background:var(--gold-soft);border-color:var(--gold-soft);}
+  .btn-sage{background:var(--sage);border-color:var(--sage);color:#0f1a10;font-weight:600;}
+  .btn-sage:hover{background:var(--sage-soft);}
+  .btn-peri{background:var(--peri);border-color:var(--peri);color:#12142a;font-weight:600;}
+  .btn-brick{background:var(--brick);border-color:var(--brick);color:#fff;}
+  .btn-ghost{background:transparent;}
+  .btn-sm{padding:5px 10px;font-size:11.5px;}
+  .btn-block{width:100%;}
+  .btn-danger-outline{background:transparent;border-color:var(--brick);color:var(--brick-soft);}
+
+  /* forms */
+  label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);margin-bottom:5px;}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:9px 10px;font-size:14px;font-family:inherit;
+  }
+  input::placeholder,textarea::placeholder{color:var(--text-faint);}
+  .field{margin-bottom:12px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  fieldset{border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin:0 0 12px;}
+  legend{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);padding:0 6px;}
+  .seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .seg label{margin:0;flex:1;text-align:center;padding:8px 6px;font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer;color:var(--text-muted);border-right:1px solid var(--border);}
+  .seg label:last-child{border-right:none;}
+  .seg input{position:absolute;opacity:0;pointer-events:none;}
+  .seg input:checked + label{background:var(--surface-3);color:var(--gold-soft);}
+
+  /* habit row */
+  .habit-item{border-top:1px solid var(--border-soft);padding:12px 0;}
+  .habit-item:first-child{border-top:none;padding-top:0;}
+  .habit-name-btn{background:none;border:none;color:var(--text);font-size:14.5px;text-align:left;cursor:pointer;padding:0;font-family:inherit;}
+  .habit-name-btn:hover{color:var(--gold-soft);}
+  .habit-meta{font-size:11.5px;color:var(--text-faint);margin-top:2px;}
+  .check-circle{
+    width:30px;height:30px;flex:none;border-radius:50%;border:2px solid var(--border);
+    background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;
+    color:transparent;transition:all .15s;
+  }
+  .check-circle.done{background:var(--sage);border-color:var(--sage);color:#0f1a10;}
+  .check-circle svg{width:15px;height:15px;}
+  .diff-tag{font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:5px;border:1px solid var(--border);}
+  .diff-easy{color:var(--sage-soft);}
+  .diff-medium{color:var(--gold-soft);}
+  .diff-hard{color:var(--brick-soft);}
+
+  /* calendar */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-dow{font-size:9.5px;text-align:center;color:var(--text-faint);text-transform:uppercase;padding-bottom:2px;}
+  .cal-cell{
+    aspect-ratio:1;border-radius:6px;border:1px solid var(--border-soft);background:var(--bg);
+    display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint);
+    cursor:pointer;font-variant-numeric:tabular-nums;
+  }
+  .cal-cell.done{background:var(--sage);border-color:var(--sage);color:#0f1a10;font-weight:600;}
+  .cal-cell.frozen{background:var(--peri);border-color:var(--peri);color:#12142a;}
+  .cal-cell.future,.cal-cell.outside{opacity:.3;cursor:default;pointer-events:none;}
+  .cal-cell.today-marker{box-shadow:0 0 0 1.5px var(--gold-soft) inset;}
+
+  /* progress / meter bars */
+  .meter{background:var(--bg);border:1px solid var(--border);border-radius:99px;height:10px;overflow:hidden;}
+  .meter-fill{height:100%;border-radius:99px;transition:width .4s ease;}
+
+  /* modal / overlay */
+  .overlay{
+    position:fixed;inset:0;background:rgba(10,12,8,.72);display:flex;align-items:center;justify-content:center;
+    padding:20px;z-index:50;
+  }
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;}
+
+  /* toast */
+  .toast{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--surface-3);
+    border:1px solid var(--gold);border-radius:var(--radius);padding:12px 18px;z-index:60;
+    display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);
+    animation:toast-in .25s ease;max-width:90vw;
+  }
+  @keyframes toast-in{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+  /* misc */
+  .divider{height:1px;background:var(--border-soft);margin:14px 0;}
+  .list-plain{list-style:none;margin:0;padding:0;}
+  .bar-chart{display:flex;align-items:flex-end;gap:8px;height:100px;padding-top:10px;}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .bar-shape{width:100%;max-width:26px;background:var(--gold);border-radius:4px 4px 0 0;min-height:2px;}
+  .bar-col-label{font-size:9.5px;color:var(--text-faint);}
+  .achv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;}
+  .achv{border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;}
+  .achv.locked{opacity:.35;}
+  .achv-name{color:var(--gold-soft);font-weight:600;margin-bottom:2px;}
+  textarea{resize:vertical;min-height:56px;}
+  .recap-stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-soft);font-size:13.5px;}
+  .recap-stat:last-child{border-bottom:none;}
+
+  /* reorder controls */
+  .reorder-col{display:flex;flex-direction:column;gap:2px;flex:none;}
+  .reorder-btn{
+    background:transparent;border:1px solid var(--border);color:var(--text-faint);
+    border-radius:5px;width:20px;height:16px;line-height:1;font-size:9px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .reorder-btn:hover:not(:disabled){border-color:var(--gold);color:var(--gold-soft);}
+  .reorder-btn:disabled{opacity:.25;cursor:default;}
+
+  /* inline confirm */
+  .confirm-inline{display:flex;align-items:center;gap:6px;font-size:12px;}
+  .confirm-inline .muted{font-size:12px;}
+
+  /* edit form panel */
+  .edit-panel{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:10px;}
+
+  /* level-up toast */
+  .toast-levelup{
+    border-color:var(--gold-soft);font-weight:600;color:var(--gold-soft);
+    box-shadow:0 0 0 2px rgba(224,196,104,.3),0 8px 24px rgba(0,0,0,.45);
+    animation:levelup-toast 1.8s ease-in-out;
+  }
+  @keyframes levelup-toast{
+    0%{opacity:0;transform:translateX(-50%) translateY(8px) scale(1);}
+    12%{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+    28%{transform:translateX(-50%) scale(1.06);}
+    42%{transform:translateX(-50%) scale(1);}
+    58%{transform:translateX(-50%) scale(1.06);}
+    72%{transform:translateX(-50%) scale(1);}
+    100%{opacity:1;transform:translateX(-50%) scale(1);}
+  }
+
+  /* category tag + progress */
+  .cat-tag{font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:5px;border:1px solid var(--border);}
+  .cat-progress-row{margin-bottom:12px;}
+  .cat-progress-row:last-child{margin-bottom:0;}
+  .cat-progress-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;}
+  .cat-progress-name{font-size:13px;font-weight:600;}
+  .cat-progress-sub{font-size:11px;color:var(--text-faint);font-variant-numeric:tabular-nums;}
+
+  /* lifetime totals grid */
+  .totals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;}
+  .totals-cell{border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+  .totals-val{font-family:var(--font-display);font-size:20px;font-variant-numeric:tabular-nums;color:var(--gold-soft);}
+  .totals-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-top:2px;}
+</style>
+</head>
+<body>
+<div id="app"><div id="loading">Loading your progress…</div></div>
+
+<script>
+(function(){
+'use strict';
+
+/* =====================================================================
+   CONSTANTS
+   ===================================================================== */
+var STORAGE_KEY = 'ascend_state_v1';
+var DIFFICULTY_POINTS = { easy: 5, medium: 10, hard: 20 };
+var DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+var MONTH_LABELS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var CATEGORIES = [
+  { id:'health', label:'Health', color:'var(--sage-soft)' },
+  { id:'chores', label:'Chores', color:'var(--peri-soft)' },
+  { id:'productivity', label:'Productivity', color:'var(--gold-soft)' },
+  { id:'other', label:'Other', color:'var(--text-muted)' }
+];
+var LUCKY_CHANCE = 0.12;
+var LUCKY_BONUS_FRACTION = 0.4;
+
+var ACHIEVEMENTS = [
+  { id:'first_step', name:'First Step', desc:'Complete your first habit', check:function(s,d){ return d.totalCompletions>=1; } },
+  { id:'getting_started', name:'Getting Started', desc:'10 total habit check-ins', check:function(s,d){ return d.totalCompletions>=10; } },
+  { id:'century', name:'Century Club', desc:'100 total habit check-ins', check:function(s,d){ return d.totalCompletions>=100; } },
+  { id:'week_strong', name:'One Week Strong', desc:'7-day streak on any habit', check:function(s,d){ return d.bestStreak>=7; } },
+  { id:'fortnight', name:'Two Week Warrior', desc:'14-day streak on any habit', check:function(s,d){ return d.bestStreak>=14; } },
+  { id:'unstoppable', name:'Unstoppable', desc:'30-day streak on any habit', check:function(s,d){ return d.bestStreak>=30; } },
+  { id:'level5', name:'Level 5', desc:'Reach level 5', check:function(s,d){ return d.level>=5; } },
+  { id:'level10', name:'Level 10', desc:'Reach level 10', check:function(s,d){ return d.level>=10; } },
+  { id:'level20', name:'Level 20', desc:'Reach level 20', check:function(s,d){ return d.level>=20; } },
+  { id:'task_master', name:'Task Master', desc:'Complete 25 one-off tasks', check:function(s,d){ return d.tasksCompleted>=25; } },
+  { id:'big_spender', name:'Big Spender', desc:'Make your first shop purchase', check:function(s,d){ return s.purchases.length>=1; } },
+  { id:'mindful_logger', name:'Mindful Logger', desc:'Log 10 emergency sessions with a reason', check:function(s,d){ return d.emergencySessionsLogged>=10; } },
+  { id:'lucky_break', name:'Lucky Break', desc:'Hit your first lucky bonus', check:function(s,d){ return (s.luckyBonusCount||0)>=1; } },
+  { id:'four_leaf', name:'Four-Leaf Clover', desc:'Hit 10 lucky bonuses', check:function(s,d){ return (s.luckyBonusCount||0)>=10; } },
+  { id:'specialist', name:'Specialist', desc:'Reach level 5 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=5; }); } },
+  { id:'well_rounded', name:'Well Rounded', desc:'Reach level 3 in every category', check:function(s,d){ return categoryDerived().every(function(c){ return c.level>=3; }); } }
+];
+
+/* =====================================================================
+   STATE (module-level)
+   ===================================================================== */
+var state = null;
+var ui = {
+  activeTab:'today',
+  expandedHabitId:null,
+  calMonthOffset:0,
+  showAddHabit:false,
+  showAddTask:false,
+  showAddShopItem:false,
+  showEmergencyStartForm:false,
+  showManualLogForm:false,
+  showImportConfirm:false,
+  pendingImportData:null,
+  showResetConfirm:false,
+  showRecap:false,
+  recapData:null,
+  toast:null,
+  toastVariant:null,
+  historyLimit:15,
+  editingHabitId:null,
+  editingTaskId:null,
+  editingShopItemId:null,
+  pendingDeleteKind:null,
+  pendingDeleteId:null
+};
+var timerTickHandle = null;
+var toastTimeoutHandle = null;
+
+/* =====================================================================
+   DATE UTILITIES (local time, avoids UTC off-by-one bugs)
+   ===================================================================== */
+function pad2(n){ return (n<10?'0':'')+n; }
+function localDateKey(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function parseDateKey(key){ var p=key.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function todayKey(){ return localDateKey(new Date()); }
+function addDaysKey(key,delta){ var d=parseDateKey(key); d.setDate(d.getDate()+delta); return localDateKey(d); }
+function weekKeyFor(key){
+  var d=parseDateKey(key);
+  var day=d.getDay();
+  var diffToMonday=(day===0?-6:1-day);
+  d.setDate(d.getDate()+diffToMonday);
+  return localDateKey(d);
+}
+function compareKeys(a,b){ return a<b?-1:(a>b?1:0); }
+function formatDateHuman(key){
+  var d=parseDateKey(key);
+  return MONTH_LABELS[d.getMonth()].slice(0,3)+' '+d.getDate();
+}
+function formatMinutes(min){
+  min=Math.round(min);
+  if(min<60) return min+'m';
+  var h=Math.floor(min/60), m=min%60;
+  return h+'h'+(m?' '+m+'m':'');
+}
+function todayMonthKey(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
+function monthKeyOf(key){ return key.slice(0,7); }
+
+/* =====================================================================
+   DEFAULT STATE
+   ===================================================================== */
+function defaultState(){
+  return {
+    version:1,
+    createdAt:todayKey(),
+    lastOpenedDate:null,
+    habits:[],
+    tasks:[],
+    shopItems:[
+      { id:uid(), name:'30 min gaming', cost:60 },
+      { id:uid(), name:'1 episode of a show', cost:80 },
+      { id:uid(), name:'Order takeout', cost:200 }
+    ],
+    purchases:[],
+    topups:[],
+    luckyBonusCount:0,
+    pcLedger:{
+      dailyFreeMinutes:120,
+      weeklyEmergencyMinutes:180,
+      topupPointCost:50,
+      topupMinutes:15,
+      sessions:[],
+      activeTimer:null
+    },
+    achievements:[],
+    settings:{
+      difficultyPoints:{ easy:5, medium:10, hard:20 },
+      pointsCap:0
+    }
+  };
+}
+var uidCounter=0;
+function uid(){ uidCounter++; return Date.now().toString(36)+'_'+uidCounter+'_'+Math.random().toString(36).slice(2,7); }
+
+/* =====================================================================
+   STORAGE — layered & defensive: Claude storage -> localStorage -> memory.
+   Never allowed to throw or hang; loadState() always resolves, persist()
+   never blocks rendering even if every backend is unavailable.
+   ===================================================================== */
+var storageMode='detecting'; // 'claude' | 'local' | 'memory'
+var memoryStore={};
+function waitForClaudeStorage(maxWaitMs){
+  return new Promise(function(resolve){
+    var waited=0, step=100;
+    (function poll(){
+      try{
+        if(window.storage && typeof window.storage.get==='function' && typeof window.storage.set==='function'){
+          resolve(true); return;
+        }
+      }catch(e){ /* keep polling */ }
+      waited+=step;
+      if(waited>=maxWaitMs){ resolve(false); return; }
+      setTimeout(poll,step);
+    })();
+  });
+}
+function detectStorageMode(){
+  if(storageMode!=='detecting') return Promise.resolve(storageMode);
+  return waitForClaudeStorage(1500).then(function(hasClaude){
+    if(hasClaude){ storageMode='claude'; return storageMode; }
+    try{
+      var probe='__ascend_probe__';
+      window.localStorage.setItem(probe,'1');
+      window.localStorage.removeItem(probe);
+      storageMode='local';
+    }catch(e){
+      storageMode='memory';
+    }
+    return storageMode;
+  });
+}
+function safeParse(str){ try{ return JSON.parse(str); }catch(e){ return null; } }
+function loadState(){
+  return detectStorageMode().then(function(mode){
+    if(mode==='claude'){
+      return window.storage.get(STORAGE_KEY,false).then(function(res){
+        return (res && res.value)?safeParse(res.value):null;
+      }).catch(function(){ return null; });
+    }
+    if(mode==='local'){
+      try{
+        var v=window.localStorage.getItem(STORAGE_KEY);
+        return v?safeParse(v):null;
+      }catch(e){ return null; }
+    }
+    return memoryStore[STORAGE_KEY]?safeParse(memoryStore[STORAGE_KEY]):null;
+  }).catch(function(){ return null; });
+}
+var saveInFlight=false, savePending=false;
+function persist(){
+  if(saveInFlight){ savePending=true; return; }
+  saveInFlight=true;
+  var json;
+  try{ json=JSON.stringify(state); }catch(e){ saveInFlight=false; return; }
+  var finish=function(){ saveInFlight=false; if(savePending){ savePending=false; persist(); } };
+  detectStorageMode().then(function(mode){
+    if(mode==='claude'){
+      window.storage.set(STORAGE_KEY,json,false).catch(function(e){ console.error('Ascend: save failed',e); }).then(finish);
+    } else if(mode==='local'){
+      try{ window.localStorage.setItem(STORAGE_KEY,json); }catch(e){ console.error('Ascend: local save failed',e); }
+      finish();
+    } else {
+      memoryStore[STORAGE_KEY]=json;
+      finish();
+    }
+  }).catch(finish);
+}
+
+/* =====================================================================
+   FORMAT / ESCAPE HELPERS
+   ===================================================================== */
+function esc(str){
+  if(str===null||str===undefined) return '';
+  return String(str).replace(/[&<>"']/g,function(c){
+    return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c==='"'?'&quot;':'&#39;';
+  });
+}
+function clampInt(v,min,max,fallback){
+  var n=parseInt(v,10);
+  if(isNaN(n)) n=fallback;
+  if(min!==undefined && n<min) n=min;
+  if(max!==undefined && n>max) n=max;
+  return n;
+}
+
+/* =====================================================================
+   LEVEL / XP CURVE
+   ===================================================================== */
+function xpForLevel(level){ return Math.round(50*Math.pow(level,1.5)); }
+function levelInfo(totalXp){
+  var level=1, used=0, guard=0;
+  while(guard<2000){
+    var need=xpForLevel(level);
+    if(used+need>totalXp) break;
+    used+=need; level++; guard++;
+  }
+  var need=xpForLevel(level);
+  return { level:level, xpIntoLevel:totalXp-used, xpForNext:need, progress:need>0?(totalXp-used)/need:0 };
+}
+function levelTierName(level){
+  if(level>=21) return 'Ancient Bloom';
+  if(level>=11) return 'Young Tree';
+  if(level>=6) return 'Sapling';
+  if(level>=3) return 'Sprout';
+  return 'Seed';
+}
+
+/* =====================================================================
+   STREAKS
+   ===================================================================== */
+function freezesUsedInMonth(habit, monthKey){
+  return (habit.freezes||[]).filter(function(k){ return monthKeyOf(k)===monthKey; }).length;
+}
+function isCoveredDay(habit, key){
+  return habit.completions.hasOwnProperty(key) || (habit.freezes||[]).indexOf(key)!==-1;
+}
+function streakEndingAt(habit, dateKey){
+  var count=0, key=dateKey, guard=0;
+  while(guard<3660){
+    if(isCoveredDay(habit,key)){ count++; key=addDaysKey(key,-1); guard++; }
+    else break;
+  }
+  return count;
+}
+function currentStreak(habit){
+  var t=todayKey();
+  if(isCoveredDay(habit,t)) return streakEndingAt(habit,t);
+  var y=addDaysKey(t,-1);
+  if(isCoveredDay(habit,y)) return streakEndingAt(habit,y);
+  return 0;
+}
+function streakMultiplier(streak){
+  if(streak>=30) return 1.5;
+  if(streak>=14) return 1.35;
+  if(streak>=7) return 1.2;
+  if(streak>=3) return 1.1;
+  return 1.0;
+}
+function bestStreakAcrossHabits(){
+  var best=0;
+  (state.habits||[]).forEach(function(h){ var s=currentStreak(h); if(s>best) best=s; });
+  return best;
+}
+function longestStreakEver(habit){
+  var keys=Object.keys(habit.completions||{}).concat(habit.freezes||[]);
+  keys=keys.filter(function(k,idx){ return keys.indexOf(k)===idx; }).sort(compareKeys);
+  if(!keys.length) return 0;
+  var best=1, run=1;
+  for(var i=1;i<keys.length;i++){
+    if(addDaysKey(keys[i-1],1)===keys[i]) run++;
+    else run=1;
+    if(run>best) best=run;
+  }
+  return best;
+}
+function longestStreakEverAcrossHabits(){
+  var best=0;
+  (state.habits||[]).forEach(function(h){ var s=longestStreakEver(h); if(s>best) best=s; });
+  return best;
+}
+
+/* =====================================================================
+   DERIVED TOTALS (ledger-derived, not stored counters — self-healing)
+   ===================================================================== */
+function computeDerived(){
+  var totalXp=0, totalCompletions=0, tasksCompleted=0, emergencySessionsLogged=0;
+  (state.habits||[]).forEach(function(h){
+    Object.keys(h.completions||{}).forEach(function(k){
+      totalXp+=h.completions[k];
+      totalCompletions++;
+    });
+  });
+  (state.tasks||[]).forEach(function(t){
+    if(t.done){ totalXp+=t.pointsAwarded||0; tasksCompleted++; }
+  });
+  var spent=0;
+  (state.purchases||[]).forEach(function(p){ spent+=p.cost; });
+  (state.topups||[]).forEach(function(t){ spent+=t.pointsSpent; });
+  (state.pcLedger.sessions||[]).forEach(function(s){ if(s.type==='emergency') emergencySessionsLogged++; });
+  var points=totalXp-spent;
+  var cap=state.settings && state.settings.pointsCap;
+  if(cap && cap>0 && points>cap) points=cap;
+  var li=levelInfo(totalXp);
+  return {
+    xp:totalXp,
+    points:points,
+    pointsSpent:spent,
+    totalCompletions:totalCompletions,
+    tasksCompleted:tasksCompleted,
+    emergencySessionsLogged:emergencySessionsLogged,
+    bestStreak:bestStreakAcrossHabits(),
+    bestStreakEver:longestStreakEverAcrossHabits(),
+    level:li.level,
+    xpIntoLevel:li.xpIntoLevel,
+    xpForNext:li.xpForNext,
+    progress:li.progress
+  };
+}
+function categoryXp(catId){
+  var xp=0;
+  (state.habits||[]).forEach(function(h){
+    if((h.category||'other')!==catId) return;
+    Object.keys(h.completions||{}).forEach(function(k){ xp+=h.completions[k]; });
+  });
+  return xp;
+}
+function categoryDerived(){
+  return CATEGORIES.map(function(c){
+    var xp=categoryXp(c.id);
+    var li=levelInfo(xp);
+    return { id:c.id, label:c.label, color:c.color, xp:xp, level:li.level, xpIntoLevel:li.xpIntoLevel, xpForNext:li.xpForNext, progress:li.progress };
+  });
+}
+
+/* =====================================================================
+   PC LEDGER CALCS
+   ===================================================================== */
+function sessionsForDay(dateKey){
+  return (state.pcLedger.sessions||[]).filter(function(s){ return s.dateKey===dateKey; });
+}
+function sessionsForWeek(weekKey){
+  return (state.pcLedger.sessions||[]).filter(function(s){ return s.weekKey===weekKey; });
+}
+function liveElapsedMinutes(){
+  var at=state.pcLedger.activeTimer;
+  if(!at) return 0;
+  return (Date.now()-new Date(at.startedAt).getTime())/60000;
+}
+function freeMinutesUsedToday(){
+  var t=todayKey();
+  var used=0;
+  sessionsForDay(t).forEach(function(s){ if(s.type==='free') used+=s.minutes; });
+  var at=state.pcLedger.activeTimer;
+  if(at && at.type==='free' && localDateKey(new Date(at.startedAt))===t) used+=liveElapsedMinutes();
+  return used;
+}
+function freeTopupMinutesToday(){
+  var t=todayKey(), add=0;
+  (state.topups||[]).forEach(function(tu){ if(tu.dateKey===t) add+=tu.minutesAdded; });
+  return add;
+}
+function freeMinutesRemainingToday(){
+  return state.pcLedger.dailyFreeMinutes + freeTopupMinutesToday() - freeMinutesUsedToday();
+}
+function emergencyMinutesUsedThisWeek(){
+  var wk=weekKeyFor(todayKey());
+  var used=0;
+  sessionsForWeek(wk).forEach(function(s){ if(s.type==='emergency') used+=s.minutes; });
+  var at=state.pcLedger.activeTimer;
+  if(at && at.type==='emergency' && weekKeyFor(localDateKey(new Date(at.startedAt)))===wk) used+=liveElapsedMinutes();
+  return used;
+}
+function emergencyMinutesRemainingThisWeek(){
+  return state.pcLedger.weeklyEmergencyMinutes - emergencyMinutesUsedThisWeek();
+}
+
+/* =====================================================================
+   ACHIEVEMENTS
+   ===================================================================== */
+function checkAchievements(){
+  var d=computeDerived();
+  var unlockedIds=(state.achievements||[]).map(function(a){ return a.id; });
+  var newlyUnlocked=[];
+  ACHIEVEMENTS.forEach(function(a){
+    if(unlockedIds.indexOf(a.id)===-1 && a.check(state,d)){
+      state.achievements.push({ id:a.id, unlockedAt:todayKey() });
+      newlyUnlocked.push(a);
+    }
+  });
+  if(newlyUnlocked.length){
+    queueToast('Achievement unlocked: '+newlyUnlocked[0].name);
+  }
+  return newlyUnlocked;
+}
+
+/* =====================================================================
+   TOAST
+   ===================================================================== */
+function queueToast(msg){
+  ui.toast=msg;
+  ui.toastVariant=null;
+  if(toastTimeoutHandle) clearTimeout(toastTimeoutHandle);
+  toastTimeoutHandle=setTimeout(function(){ ui.toast=null; ui.toastVariant=null; render(); },3400);
+}
+function queueLevelUpToast(level){
+  ui.toast='\u2605 Level up! Now level '+level+' \u2014 '+levelTierName(level);
+  ui.toastVariant='levelup';
+  if(toastTimeoutHandle) clearTimeout(toastTimeoutHandle);
+  toastTimeoutHandle=setTimeout(function(){ ui.toast=null; ui.toastVariant=null; render(); },4500);
+}
+
+/* =====================================================================
+   GROWTH GLYPH (signature SVG element)
+   ===================================================================== */
+function growthGlyph(level){
+  var gold="var(--gold-soft)", sage="var(--sage-soft)", trunk="var(--sage)";
+  if(level<3){
+    return '<svg viewBox="0 0 40 40" fill="none"><path d="M20 32V22" stroke="'+trunk+'" stroke-width="2" stroke-linecap="round"/><path d="M20 24c-3-1-5-4-5-8 4 0 6 3 5 8z" fill="'+sage+'"/><path d="M20 22c3-1 5-4 5-7-4 0-6 2-5 7z" fill="'+sage+'"/><ellipse cx="20" cy="33" rx="7" ry="2" fill="'+trunk+'" opacity=".25"/></svg>';
+  }
+  if(level<6){
+    return '<svg viewBox="0 0 40 40" fill="none"><path d="M20 33V17" stroke="'+trunk+'" stroke-width="2.4" stroke-linecap="round"/><circle cx="20" cy="14" r="9" fill="'+sage+'"/><circle cx="13" cy="19" r="5" fill="'+sage+'"/><circle cx="27" cy="19" r="5" fill="'+sage+'"/><ellipse cx="20" cy="34" rx="8" ry="2" fill="'+trunk+'" opacity=".25"/></svg>';
+  }
+  if(level<11){
+    return '<svg viewBox="0 0 40 40" fill="none"><path d="M20 34V19" stroke="'+trunk+'" stroke-width="3" stroke-linecap="round"/><path d="M20 24l-6-5M20 22l6-5" stroke="'+trunk+'" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="12" r="10" fill="'+sage+'"/><circle cx="11" cy="18" r="6" fill="'+sage+'"/><circle cx="29" cy="18" r="6" fill="'+sage+'"/><ellipse cx="20" cy="35" rx="9" ry="2" fill="'+trunk+'" opacity=".25"/></svg>';
+  }
+  if(level<21){
+    return '<svg viewBox="0 0 40 40" fill="none"><path d="M20 35V18" stroke="'+trunk+'" stroke-width="3.4" stroke-linecap="round"/><path d="M20 25l-7-6M20 22l7-6M20 28l-5-3M20 26l5-3" stroke="'+trunk+'" stroke-width="1.8" stroke-linecap="round"/><circle cx="20" cy="10" r="10" fill="'+sage+'"/><circle cx="9" cy="17" r="6.5" fill="'+sage+'"/><circle cx="31" cy="17" r="6.5" fill="'+sage+'"/><circle cx="14" cy="8" r="2" fill="'+gold+'"/><circle cx="27" cy="12" r="2" fill="'+gold+'"/><ellipse cx="20" cy="36" rx="10" ry="2" fill="'+trunk+'" opacity=".25"/></svg>';
+  }
+  return '<svg viewBox="0 0 40 40" fill="none"><path d="M20 35V18" stroke="'+trunk+'" stroke-width="3.4" stroke-linecap="round"/><path d="M20 25l-7-6M20 22l7-6M20 28l-5-3M20 26l5-3" stroke="'+trunk+'" stroke-width="1.8" stroke-linecap="round"/><circle cx="20" cy="10" r="10" fill="'+sage+'"/><circle cx="9" cy="17" r="6.5" fill="'+sage+'"/><circle cx="31" cy="17" r="6.5" fill="'+sage+'"/><circle cx="12" cy="6" r="2.2" fill="'+gold+'"/><circle cx="27" cy="9" r="2.2" fill="'+gold+'"/><circle cx="20" cy="3" r="2.2" fill="'+gold+'"/><circle cx="30" cy="20" r="2.2" fill="'+gold+'"/><ellipse cx="20" cy="36" rx="10" ry="2" fill="'+trunk+'" opacity=".3"/></svg>';
+}
+
+/* =====================================================================
+   ACTIONS — HABITS
+   ===================================================================== */
+function addHabit(name,difficulty,category){
+  name=(name||'').trim();
+  if(!name) return;
+  if(['easy','medium','hard'].indexOf(difficulty)===-1) difficulty='medium';
+  if(CATEGORIES.filter(function(c){return c.id===category;}).length===0) category='other';
+  state.habits.push({ id:uid(), name:name.slice(0,60), difficulty:difficulty, category:category, createdAt:todayKey(), archived:false, completions:{}, freezes:[] });
+  ui.showAddHabit=false;
+  persist(); render();
+}
+function toggleHabitDay(habitId,dateKey){
+  var habit=findHabit(habitId);
+  if(!habit) return;
+  if(compareKeys(dateKey,todayKey())>0) return;
+  if(compareKeys(dateKey,habit.createdAt)<0) return;
+  var levelBefore=computeDerived().level;
+  var lucky=false, bonus=0;
+  if(habit.completions.hasOwnProperty(dateKey)){
+    delete habit.completions[dateKey];
+  } else {
+    var streak=streakEndingAt(habit,dateKey);
+    var mult=streakMultiplier(streak);
+    var base=(state.settings.difficultyPoints[habit.difficulty])||DIFFICULTY_POINTS[habit.difficulty]||10;
+    var pts=Math.round(base*mult);
+    if(Math.random()<LUCKY_CHANCE){
+      bonus=Math.max(1,Math.round(base*LUCKY_BONUS_FRACTION));
+      pts+=bonus;
+      lucky=true;
+      state.luckyBonusCount=(state.luckyBonusCount||0)+1;
+    }
+    habit.completions[dateKey]=pts;
+  }
+  checkAchievements();
+  var levelAfter=computeDerived().level;
+  if(levelAfter>levelBefore) queueLevelUpToast(levelAfter);
+  else if(lucky) queueToast('\u2728 Lucky bonus! +'+bonus+'p on '+habit.name);
+  persist(); render();
+}
+function useStreakFreeze(habitId){
+  var habit=findHabit(habitId);
+  if(!habit) return;
+  var mk=todayMonthKey();
+  if(freezesUsedInMonth(habit,mk)>=2) return;
+  var key=addDaysKey(todayKey(),-1), guard=0;
+  while(guard<60 && compareKeys(key,habit.createdAt)>=0){
+    if(!isCoveredDay(habit,key)){
+      habit.freezes.push(key);
+      persist(); render();
+      return;
+    }
+    key=addDaysKey(key,-1); guard++;
+  }
+}
+function archiveHabit(habitId){
+  var habit=findHabit(habitId);
+  if(!habit) return;
+  habit.archived=true;
+  if(ui.expandedHabitId===habitId) ui.expandedHabitId=null;
+  ui.pendingDeleteKind=null; ui.pendingDeleteId=null;
+  persist(); render();
+}
+function findHabit(id){
+  return (state.habits||[]).filter(function(h){ return h.id===id; })[0];
+}
+function updateHabit(habitId,name,difficulty,category){
+  var habit=findHabit(habitId);
+  if(!habit) return;
+  name=(name||'').trim();
+  if(!name) return;
+  if(['easy','medium','hard'].indexOf(difficulty)===-1) difficulty='medium';
+  if(CATEGORIES.filter(function(c){return c.id===category;}).length===0) category='other';
+  habit.name=name.slice(0,60);
+  habit.difficulty=difficulty;
+  habit.category=category;
+  ui.editingHabitId=null;
+  persist(); render();
+}
+function moveHabit(habitId,dir){
+  var list=state.habits||[];
+  var activeIdxs=[];
+  list.forEach(function(h,i){ if(!h.archived) activeIdxs.push(i); });
+  var pos=activeIdxs.indexOf(list.findIndex(function(h){ return h.id===habitId; }));
+  var targetPos=pos+dir;
+  if(pos<0||targetPos<0||targetPos>=activeIdxs.length) return;
+  var a=activeIdxs[pos], b=activeIdxs[targetPos];
+  var tmp=list[a]; list[a]=list[b]; list[b]=tmp;
+  persist(); render();
+}
+
+/* =====================================================================
+   ACTIONS — TASKS
+   ===================================================================== */
+function addTask(name,points,deadline){
+  name=(name||'').trim();
+  if(!name) return;
+  points=clampInt(points,1,500,10);
+  state.tasks.push({ id:uid(), name:name.slice(0,80), points:points, deadline:deadline||null, done:false, createdAt:todayKey(), completedAt:null, pointsAwarded:0 });
+  ui.showAddTask=false;
+  persist(); render();
+}
+function toggleTask(taskId){
+  var task=(state.tasks||[]).filter(function(t){ return t.id===taskId; })[0];
+  if(!task) return;
+  var levelBefore=computeDerived().level;
+  if(task.done){
+    task.done=false; task.completedAt=null; task.pointsAwarded=0;
+  } else {
+    task.done=true; task.completedAt=todayKey(); task.pointsAwarded=task.points;
+  }
+  checkAchievements();
+  var levelAfter=computeDerived().level;
+  if(levelAfter>levelBefore) queueLevelUpToast(levelAfter);
+  persist(); render();
+}
+function deleteTask(taskId){
+  state.tasks=(state.tasks||[]).filter(function(t){ return t.id!==taskId; });
+  ui.pendingDeleteKind=null; ui.pendingDeleteId=null;
+  persist(); render();
+}
+function editTask(taskId,name,points,deadline){
+  var task=(state.tasks||[]).filter(function(t){ return t.id===taskId; })[0];
+  if(!task) return;
+  name=(name||'').trim();
+  if(!name) return;
+  task.name=name.slice(0,80);
+  task.points=clampInt(points,1,500,task.points);
+  task.deadline=deadline||null;
+  if(task.done) task.pointsAwarded=task.points;
+  ui.editingTaskId=null;
+  persist(); render();
+}
+
+/* =====================================================================
+   ACTIONS — SHOP
+   ===================================================================== */
+function addShopItem(name,cost){
+  name=(name||'').trim();
+  if(!name) return;
+  cost=clampInt(cost,1,100000,50);
+  state.shopItems.push({ id:uid(), name:name.slice(0,60), cost:cost });
+  ui.showAddShopItem=false;
+  persist(); render();
+}
+function deleteShopItem(itemId){
+  state.shopItems=(state.shopItems||[]).filter(function(i){ return i.id!==itemId; });
+  ui.pendingDeleteKind=null; ui.pendingDeleteId=null;
+  persist(); render();
+}
+function editShopItem(itemId,name,cost){
+  var item=(state.shopItems||[]).filter(function(i){ return i.id===itemId; })[0];
+  if(!item) return;
+  name=(name||'').trim();
+  if(!name) return;
+  item.name=name.slice(0,60);
+  item.cost=clampInt(cost,1,100000,item.cost);
+  ui.editingShopItemId=null;
+  persist(); render();
+}
+function moveShopItem(itemId,dir){
+  var list=state.shopItems||[];
+  var idx=list.findIndex(function(i){ return i.id===itemId; });
+  var swapIdx=idx+dir;
+  if(idx<0||swapIdx<0||swapIdx>=list.length) return;
+  var tmp=list[idx]; list[idx]=list[swapIdx]; list[swapIdx]=tmp;
+  persist(); render();
+}
+function buyShopItem(itemId){
+  var item=(state.shopItems||[]).filter(function(i){ return i.id===itemId; })[0];
+  if(!item) return;
+  var d=computeDerived();
+  if(d.points<item.cost) return;
+  state.purchases.push({ id:uid(), itemId:item.id, itemName:item.name, cost:item.cost, at:todayKey() });
+  checkAchievements();
+  persist(); render();
+  queueToast('Redeemed: '+item.name);
+}
+
+/* =====================================================================
+   ACTIONS — PC LEDGER
+   ===================================================================== */
+function startTimer(type,reason){
+  if(state.pcLedger.activeTimer) return;
+  if(type==='emergency' && !(reason||'').trim()) return;
+  state.pcLedger.activeTimer={ type:type, startedAt:new Date().toISOString(), reason:type==='emergency'?reason.trim():null };
+  ui.showEmergencyStartForm=false;
+  persist(); render();
+  startTimerTick();
+}
+function stopTimer(){
+  var at=state.pcLedger.activeTimer;
+  if(!at) return;
+  var minutes=Math.max(1,Math.round((Date.now()-new Date(at.startedAt).getTime())/60000));
+  logSession(at.type,minutes,at.reason,at.startedAt);
+  state.pcLedger.activeTimer=null;
+  stopTimerTick();
+  persist(); render();
+}
+function cancelTimer(){
+  state.pcLedger.activeTimer=null;
+  stopTimerTick();
+  persist(); render();
+}
+function logSession(type,minutes,reason,atIso){
+  minutes=clampInt(minutes,1,1440,1);
+  var at=atIso||new Date().toISOString();
+  var dateKey=localDateKey(new Date(at));
+  state.pcLedger.sessions.unshift({ id:uid(), type:type, minutes:minutes, reason:type==='emergency'?(reason||'').trim():null, at:at, dateKey:dateKey, weekKey:weekKeyFor(dateKey) });
+  checkAchievements();
+}
+function logManualSession(type,minutes,reason){
+  if(type==='emergency' && !(reason||'').trim()) return;
+  logSession(type,minutes,reason,new Date().toISOString());
+  ui.showManualLogForm=false;
+  persist(); render();
+}
+function buyTopup(){
+  var d=computeDerived();
+  var cost=state.pcLedger.topupPointCost;
+  if(d.points<cost) return;
+  state.topups.push({ id:uid(), pointsSpent:cost, minutesAdded:state.pcLedger.topupMinutes, dateKey:todayKey(), at:new Date().toISOString() });
+  persist(); render();
+  queueToast('+'+state.pcLedger.topupMinutes+' min added to today');
+}
+function startTimerTick(){
+  stopTimerTick();
+  timerTickHandle=setInterval(function(){
+    if(ui.activeTab==='today' || ui.activeTab==='pctime') renderTimerDisplays();
+  },1000);
+}
+function stopTimerTick(){
+  if(timerTickHandle){ clearInterval(timerTickHandle); timerTickHandle=null; }
+}
+function renderTimerDisplays(){
+  var els=document.querySelectorAll('[data-timer-display]');
+  for(var i=0;i<els.length;i++){
+    els[i].textContent=formatMinutes(liveElapsedMinutes());
+  }
+  var freeEls=document.querySelectorAll('[data-free-remaining]');
+  for(var j=0;j<freeEls.length;j++) freeEls[j].textContent=formatMinutes(Math.max(0,freeMinutesRemainingToday()));
+  var emEls=document.querySelectorAll('[data-emergency-remaining]');
+  for(var k=0;k<emEls.length;k++) emEls[k].textContent=formatMinutes(Math.max(0,emergencyMinutesRemainingThisWeek()));
+}
+
+/* =====================================================================
+   ACTIONS — SETTINGS / DATA
+   ===================================================================== */
+function updateSettings(fields){
+  if(fields.dailyFreeMinutes!==undefined) state.pcLedger.dailyFreeMinutes=clampInt(fields.dailyFreeMinutes,0,1440,120);
+  if(fields.weeklyEmergencyMinutes!==undefined) state.pcLedger.weeklyEmergencyMinutes=clampInt(fields.weeklyEmergencyMinutes,0,10080,180);
+  if(fields.topupPointCost!==undefined) state.pcLedger.topupPointCost=clampInt(fields.topupPointCost,1,100000,50);
+  if(fields.topupMinutes!==undefined) state.pcLedger.topupMinutes=clampInt(fields.topupMinutes,1,1440,15);
+  if(fields.easy!==undefined) state.settings.difficultyPoints.easy=clampInt(fields.easy,1,10000,5);
+  if(fields.medium!==undefined) state.settings.difficultyPoints.medium=clampInt(fields.medium,1,10000,10);
+  if(fields.hard!==undefined) state.settings.difficultyPoints.hard=clampInt(fields.hard,1,10000,20);
+  if(fields.pointsCap!==undefined) state.settings.pointsCap=clampInt(fields.pointsCap,0,10000000,0);
+  persist(); render();
+  queueToast('Settings saved');
+}
+function exportData(){
+  try{
+    var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download='ascend-backup-'+todayKey()+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+  }catch(e){ console.error('export failed',e); queueToast('Export failed'); }
+}
+function importDataConfirmed(){
+  if(ui.pendingImportData){
+    state=normalizeState(ui.pendingImportData);
+    ui.pendingImportData=null; ui.showImportConfirm=false;
+    persist(); render();
+    queueToast('Data imported');
+  }
+}
+function normalizeState(s){
+  if(!s.habits) s.habits=[];
+  if(!s.tasks) s.tasks=[];
+  if(!s.shopItems) s.shopItems=[];
+  if(!s.purchases) s.purchases=[];
+  if(!s.topups) s.topups=[];
+  if(s.luckyBonusCount===undefined) s.luckyBonusCount=0;
+  if(!s.achievements) s.achievements=[];
+  if(!s.settings) s.settings={ difficultyPoints:{easy:5,medium:10,hard:20}, pointsCap:0 };
+  if(!s.settings.difficultyPoints) s.settings.difficultyPoints={easy:5,medium:10,hard:20};
+  if(s.settings.pointsCap===undefined) s.settings.pointsCap=0;
+  if(!s.pcLedger) s.pcLedger={ dailyFreeMinutes:120, weeklyEmergencyMinutes:180, topupPointCost:50, topupMinutes:15, sessions:[], activeTimer:null };
+  if(!s.pcLedger.sessions) s.pcLedger.sessions=[];
+  if(s.pcLedger.dailyFreeMinutes===undefined) s.pcLedger.dailyFreeMinutes=120;
+  if(s.pcLedger.weeklyEmergencyMinutes===undefined) s.pcLedger.weeklyEmergencyMinutes=180;
+  if(s.pcLedger.topupPointCost===undefined) s.pcLedger.topupPointCost=50;
+  if(s.pcLedger.topupMinutes===undefined) s.pcLedger.topupMinutes=15;
+  if(s.pcLedger.activeTimer===undefined) s.pcLedger.activeTimer=null;
+  if(!s.lastOpenedDate) s.lastOpenedDate=null;
+  s.habits.forEach(function(h){
+    if(!h.completions) h.completions={};
+    if(!h.freezes) h.freezes=[];
+    if(h.archived===undefined) h.archived=false;
+    if(!h.category || CATEGORIES.filter(function(c){return c.id===h.category;}).length===0) h.category='other';
+  });
+  return s;
+}
+function resetAllData(){
+  state=defaultState();
+  ui.showResetConfirm=false;
+  persist(); render();
+}
+
+/* =====================================================================
+   RECAP (new-day detection)
+   ===================================================================== */
+function buildRecap(dateKey){
+  var habitsDone=0, habitsTotal=0, points=0;
+  (state.habits||[]).forEach(function(h){
+    if(h.archived) return;
+    if(compareKeys(h.createdAt,dateKey)>0) return;
+    habitsTotal++;
+    if(h.completions.hasOwnProperty(dateKey)){ habitsDone++; points+=h.completions[dateKey]; }
+  });
+  (state.tasks||[]).forEach(function(t){ if(t.completedAt===dateKey) points+=t.pointsAwarded; });
+  var pcMinutes=0;
+  sessionsForDay(dateKey).forEach(function(s){ pcMinutes+=s.minutes; });
+  return { dateKey:dateKey, habitsDone:habitsDone, habitsTotal:habitsTotal, points:points, pcMinutes:pcMinutes };
+}
+function checkNewDay(){
+  var t=todayKey();
+  if(state.lastOpenedDate && state.lastOpenedDate!==t){
+    ui.showRecap=true;
+    ui.recapData=buildRecap(state.lastOpenedDate);
+  }
+  state.lastOpenedDate=t;
+}
+
+/* =====================================================================
+   RENDER — small shared pieces
+   ===================================================================== */
+function meter(value,max,colorVar){
+  var pct=max>0?Math.max(0,Math.min(100,(value/max)*100)):0;
+  return '<div class="meter"><div class="meter-fill" style="width:'+pct+'%;background:'+colorVar+';"></div></div>';
+}
+function card(eyebrowText,innerHtml,extraClass){
+  return '<div class="card'+(extraClass?(' '+extraClass):'')+'">'+(eyebrowText?'<span class="eyebrow">'+esc(eyebrowText)+'</span>':'')+innerHtml+'</div>';
+}
+function checkIconSvg(){
+  return '<svg viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function storageStatusLine(){
+  if(storageMode==='claude') return '<div class="faint" style="margin-bottom:10px;">Storage: saved to your Claude account &mdash; persists across sessions in this chat.</div>';
+  if(storageMode==='local') return '<div class="faint" style="margin-bottom:10px;">Storage: saved in this browser only &mdash; export a backup to move it to another device.</div>';
+  if(storageMode==='memory') return '<div class="faint c-brick" style="margin-bottom:10px;">Storage: not saving right now, this session only &mdash; export a backup before closing this tab.</div>';
+  return '';
+}
+
+/* =====================================================================
+   RENDER — HEADER (HUD)
+   ===================================================================== */
+function renderHeader(){
+  var d=computeDerived();
+  return ''+
+  '<div class="hud">'+
+    '<div class="hud-top">'+
+      '<span class="wordmark">Ascend</span>'+
+      '<button class="icon-btn" data-action="goto-settings">Settings</button>'+
+    '</div>'+
+    '<div class="hud-main">'+
+      '<div class="glyph-wrap">'+growthGlyph(d.level)+'</div>'+
+      '<div class="hud-info">'+
+        '<div class="level-row"><span class="level-num">Level '+d.level+'</span><span class="level-tier">'+levelTierName(d.level)+'</span></div>'+
+        '<div class="xp-bar-track"><div class="xp-bar-fill" style="width:'+Math.round(d.progress*100)+'%;"></div></div>'+
+        '<div class="xp-label">'+d.xpIntoLevel+' / '+d.xpForNext+' xp to next level</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="hud-stats">'+
+      '<div class="hud-stat"><span class="hud-stat-label">Points</span><span class="hud-stat-val c-gold">'+d.points+'</span></div>'+
+      '<div class="hud-stat"><span class="hud-stat-label">Current streak</span><span class="hud-stat-val c-sage">'+d.bestStreak+'d</span></div>'+
+      '<div class="hud-stat"><span class="hud-stat-label">Best ever</span><span class="hud-stat-val">'+d.bestStreakEver+'d</span></div>'+
+      '<div class="hud-stat"><span class="hud-stat-label">Free time left</span><span class="hud-stat-val c-peri" data-free-remaining>'+formatMinutes(Math.max(0,freeMinutesRemainingToday()))+'</span></div>'+
+    '</div>'+
+  '</div>';
+}
+
+/* =====================================================================
+   RENDER — TABS
+   ===================================================================== */
+var TABS=[
+  {id:'today',label:'Today'},
+  {id:'habits',label:'Habits'},
+  {id:'tasks',label:'Tasks'},
+  {id:'shop',label:'Shop'},
+  {id:'pctime',label:'PC Time'},
+  {id:'stats',label:'Stats'},
+  {id:'settings',label:'Settings'}
+];
+function renderTabs(){
+  var html='<div class="tabs">';
+  TABS.forEach(function(t){
+    html+='<button class="tab-btn'+(ui.activeTab===t.id?' active':'')+'" data-action="set-tab" data-tab="'+t.id+'">'+t.label+'</button>';
+  });
+  html+='</div>';
+  return html;
+}
+
+/* =====================================================================
+   RENDER — TODAY
+   ===================================================================== */
+function renderToday(){
+  var t=todayKey();
+  var html='';
+  var activeHabits=(state.habits||[]).filter(function(h){ return !h.archived; });
+  var todoHabits=activeHabits.filter(function(h){ return compareKeys(h.createdAt,t)<=0; });
+  var doneCount=todoHabits.filter(function(h){ return h.completions.hasOwnProperty(t); }).length;
+
+  var habitsInner='<div class="row-between" style="margin-bottom:10px;"><h2 class="section-title" style="margin:0;">Today\'s habits</h2><span class="faint">'+doneCount+' / '+todoHabits.length+'</span></div>';
+  if(!todoHabits.length){
+    habitsInner+='<div class="empty">No habits yet. Add one from the Habits tab to start your streak.</div>';
+  } else {
+    habitsInner+='<div class="stack">';
+    todoHabits.forEach(function(h){
+      var isDone=h.completions.hasOwnProperty(t);
+      var streak=currentStreak(h);
+      habitsInner+='<div class="row-between">'+
+        '<div class="row">'+
+          '<button class="check-circle'+(isDone?' done':'')+'" data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+t+'" aria-label="Mark '+esc(h.name)+' done">'+checkIconSvg()+'</button>'+
+          '<div><div>'+esc(h.name)+'</div><div class="habit-meta">'+(streak>0?streak+'-day streak':'no streak yet')+'</div></div>'+
+        '</div>'+
+        '<span class="diff-tag diff-'+h.difficulty+'">'+h.difficulty+'</span>'+
+      '</div>';
+    });
+    habitsInner+='</div>';
+  }
+
+  var openTasks=(state.tasks||[]).filter(function(x){ return !x.done; }).slice(0,5);
+  var tasksInner='<h2 class="section-title" style="margin-bottom:10px;">Open tasks</h2>';
+  if(!openTasks.length){
+    tasksInner+='<div class="empty">Nothing on your one-off list right now.</div>';
+  } else {
+    tasksInner+='<div class="stack">';
+    openTasks.forEach(function(task){
+      tasksInner+='<div class="row-between">'+
+        '<div class="row"><button class="check-circle" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><span>'+esc(task.name)+'</span></div>'+
+        '<span class="faint c-gold">+'+task.points+'</span>'+
+      '</div>';
+    });
+    tasksInner+='</div>';
+  }
+
+  var freeRemaining=freeMinutesRemainingToday();
+  var emRemaining=emergencyMinutesRemainingThisWeek();
+  var pcInner='<h2 class="section-title" style="margin-bottom:10px;">PC time today</h2>'+
+    '<div class="row-between" style="margin-bottom:4px;"><span class="muted">Free budget</span><span data-free-remaining>'+formatMinutes(Math.max(0,freeRemaining))+'</span></div>'+
+    meter(state.pcLedger.dailyFreeMinutes+freeTopupMinutesToday()-Math.max(0,freeRemaining),state.pcLedger.dailyFreeMinutes+freeTopupMinutesToday(),'var(--peri)')+
+    '<div style="height:10px;"></div>'+
+    '<div class="row-between" style="margin-bottom:4px;"><span class="muted">Emergency pool (week)</span><span data-emergency-remaining>'+formatMinutes(Math.max(0,emRemaining))+'</span></div>'+
+    meter(state.pcLedger.weeklyEmergencyMinutes-Math.max(0,emRemaining),state.pcLedger.weeklyEmergencyMinutes,'var(--brick)')+
+    renderActiveTimerBlock()+
+    '<div style="margin-top:12px;"><button class="btn btn-block" data-action="set-tab" data-tab="pctime">Open PC time ledger</button></div>';
+
+  html+=card('Habits',habitsInner);
+  html+=card('Tasks',tasksInner);
+  html+=card('Ledger',pcInner);
+  return html;
+}
+function renderActiveTimerBlock(){
+  var at=state.pcLedger.activeTimer;
+  if(!at) return '';
+  return '<div class="divider"></div><div class="row-between"><div><div class="faint">'+(at.type==='emergency'?'Emergency':'Free')+' session running'+(at.reason?' &middot; &ldquo;'+esc(at.reason)+'&rdquo;':'')+'</div><div class="hud-stat-val" data-timer-display>'+formatMinutes(liveElapsedMinutes())+'</div></div><div class="row"><button class="btn btn-ghost btn-sm" data-action="cancel-timer">Discard</button><button class="btn btn-primary btn-sm" data-action="stop-timer">Stop &amp; log</button></div></div>';
+}
+
+/* =====================================================================
+   RENDER — HABITS
+   ===================================================================== */
+function categorySelectHtml(id,name,selected){
+  var html='<select id="'+id+'" name="'+name+'">';
+  CATEGORIES.forEach(function(c){ html+='<option value="'+c.id+'" '+(c.id===selected?'selected':'')+'>'+c.label+'</option>'; });
+  html+='</select>';
+  return html;
+}
+function renderCategoryProgress(){
+  var cats=categoryDerived();
+  var inner='<h2 class="section-title" style="margin-bottom:12px;">Category progress</h2>';
+  cats.forEach(function(c){
+    inner+='<div class="cat-progress-row">'+
+      '<div class="cat-progress-head"><span class="cat-progress-name" style="color:'+c.color+';">'+c.label+' &middot; Lv '+c.level+'</span><span class="cat-progress-sub">'+c.xpIntoLevel+' / '+c.xpForNext+' xp</span></div>'+
+      meter(c.xpIntoLevel,c.xpForNext,c.color)+
+    '</div>';
+  });
+  return card(null,inner);
+}
+function renderHabits(){
+  var html='';
+  var addInner='';
+  if(ui.showAddHabit){
+    addInner='<form data-form="add-habit" class="stack">'+
+      '<div class="field"><label for="hab-name">Habit name</label><input type="text" id="hab-name" name="name" placeholder="e.g. Brush teeth" maxlength="60" autofocus required></div>'+
+      '<div class="field"><label>Difficulty</label><div class="seg">'+
+        '<input type="radio" name="difficulty" id="d-easy" value="easy" checked><label for="d-easy">Easy ('+state.settings.difficultyPoints.easy+'p)</label>'+
+        '<input type="radio" name="difficulty" id="d-medium" value="medium"><label for="d-medium">Medium ('+state.settings.difficultyPoints.medium+'p)</label>'+
+        '<input type="radio" name="difficulty" id="d-hard" value="hard"><label for="d-hard">Hard ('+state.settings.difficultyPoints.hard+'p)</label>'+
+      '</div></div>'+
+      '<div class="field"><label for="hab-category">Category</label>'+categorySelectHtml('hab-category','category','other')+'</div>'+
+      '<div class="row"><button type="submit" class="btn btn-sage">Add habit</button><button type="button" class="btn btn-ghost" data-action="cancel-add-habit">Cancel</button></div>'+
+    '</form>';
+  } else {
+    addInner='<button class="btn btn-sage btn-block" data-action="show-add-habit">+ Add a habit</button>';
+  }
+  html+=card('New',addInner);
+  html+=renderCategoryProgress();
+
+  var active=(state.habits||[]).filter(function(h){ return !h.archived; });
+  var listInner='<h2 class="section-title" style="margin-bottom:2px;">Your habits</h2>';
+  if(!active.length){
+    listInner+='<div class="empty">No habits yet — add your first one above.</div>';
+  } else {
+    listInner+='<div>';
+    active.forEach(function(h,idx){
+      var t=todayKey();
+      var isDone=h.completions.hasOwnProperty(t);
+      var streak=currentStreak(h);
+      var mult=streakMultiplier(streak);
+      var best=longestStreakEver(h);
+      var catInfo=CATEGORIES.filter(function(c){return c.id===(h.category||'other');})[0]||CATEGORIES[3];
+      listInner+='<div class="habit-item">'+
+        '<div class="row-between">'+
+          '<div class="row">'+
+            '<button class="check-circle'+(isDone?' done':'')+'" data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+t+'" aria-label="Toggle today">'+checkIconSvg()+'</button>'+
+            '<div><button class="habit-name-btn" data-action="expand-habit" data-habit="'+h.id+'">'+esc(h.name)+'</button>'+
+              '<div class="habit-meta">'+streak+'-day streak'+(mult>1?' · '+mult+'x bonus':'')+(best>streak?' · best '+best:'')+'</div></div>'+
+          '</div>'+
+          '<div class="row">'+
+            '<span class="cat-tag" style="color:'+catInfo.color+';">'+catInfo.label+'</span>'+
+            '<span class="diff-tag diff-'+h.difficulty+'">'+h.difficulty+'</span>'+
+            '<div class="reorder-col">'+
+              '<button class="reorder-btn" data-action="move-habit-up" data-habit="'+h.id+'" '+(idx===0?'disabled':'')+' aria-label="Move up">&#9650;</button>'+
+              '<button class="reorder-btn" data-action="move-habit-down" data-habit="'+h.id+'" '+(idx===active.length-1?'disabled':'')+' aria-label="Move down">&#9660;</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        (ui.expandedHabitId===h.id?renderHabitDetail(h):'')+
+      '</div>';
+    });
+    listInner+='</div>';
+  }
+  html+=card(null,listInner);
+  return html;
+}
+function renderHabitDetail(h){
+  if(ui.editingHabitId===h.id){
+    return '<div class="edit-panel"><form data-form="edit-habit" class="stack">'+
+      '<input type="hidden" name="id" value="'+h.id+'">'+
+      '<div class="field"><label for="eh-name-'+h.id+'">Habit name</label><input type="text" id="eh-name-'+h.id+'" name="name" value="'+esc(h.name)+'" maxlength="60" required></div>'+
+      '<div class="field"><label>Difficulty</label><div class="seg">'+
+        '<input type="radio" name="difficulty" id="eh-d-easy-'+h.id+'" value="easy" '+(h.difficulty==='easy'?'checked':'')+'><label for="eh-d-easy-'+h.id+'">Easy ('+state.settings.difficultyPoints.easy+'p)</label>'+
+        '<input type="radio" name="difficulty" id="eh-d-medium-'+h.id+'" value="medium" '+(h.difficulty==='medium'?'checked':'')+'><label for="eh-d-medium-'+h.id+'">Medium ('+state.settings.difficultyPoints.medium+'p)</label>'+
+        '<input type="radio" name="difficulty" id="eh-d-hard-'+h.id+'" value="hard" '+(h.difficulty==='hard'?'checked':'')+'><label for="eh-d-hard-'+h.id+'">Hard ('+state.settings.difficultyPoints.hard+'p)</label>'+
+      '</div></div>'+
+      '<div class="field"><label for="eh-category-'+h.id+'">Category</label>'+categorySelectHtml('eh-category-'+h.id,'category',h.category||'other')+'</div>'+
+      '<div class="row"><button type="submit" class="btn btn-sage">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-habit">Cancel</button></div>'+
+    '</form></div>';
+  }
+  var freezesLeft=2-freezesUsedInMonth(h,todayMonthKey());
+  var refDate=new Date();
+  refDate.setMonth(refDate.getMonth()+ui.calMonthOffset);
+  var y=refDate.getFullYear(), m=refDate.getMonth();
+  var firstOfMonth=new Date(y,m,1);
+  var startOffset=(firstOfMonth.getDay()+6)%7; // Monday-first offset
+  var daysInMonth=new Date(y,m+1,0).getDate();
+  var t=todayKey();
+
+  var html='<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);">';
+  html+='<div class="cal-head"><button class="icon-btn" data-action="cal-prev" '+(ui.calMonthOffset<=-6?'disabled':'')+'>&larr;</button>'+
+    '<strong>'+MONTH_LABELS[m]+' '+y+'</strong>'+
+    '<button class="icon-btn" data-action="cal-next" '+(ui.calMonthOffset>=0?'disabled':'')+'>&rarr;</button></div>';
+  html+='<div class="cal-grid">';
+  DOW_LABELS.forEach(function(dl){ html+='<div class="cal-dow">'+dl+'</div>'; });
+  for(var i=0;i<startOffset;i++) html+='<div class="cal-cell outside"></div>';
+  for(var day=1;day<=daysInMonth;day++){
+    var key=y+'-'+pad2(m+1)+'-'+pad2(day);
+    var cls='cal-cell';
+    var isFuture=compareKeys(key,t)>0;
+    var beforeCreation=compareKeys(key,h.createdAt)<0;
+    if(h.completions.hasOwnProperty(key)) cls+=' done';
+    else if((h.freezes||[]).indexOf(key)!==-1) cls+=' frozen';
+    if(isFuture||beforeCreation) cls+=' future';
+    if(key===t) cls+=' today-marker';
+    html+='<div class="'+cls+'" '+(isFuture||beforeCreation?'':'data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+key+'"')+'>'+day+'</div>';
+  }
+  html+='</div>';
+  html+='<div class="row-between" style="margin-top:12px;">'+
+    '<span class="faint">Green = done · Blue = streak freeze</span>'+
+    '<button class="btn btn-sm" data-action="use-freeze" data-habit="'+h.id+'" '+(freezesLeft<=0?'disabled':'')+'>Use freeze ('+Math.max(0,freezesLeft)+' left)</button>'+
+  '</div>';
+  html+='<div class="faint" style="margin-top:8px;">Longest streak ever: '+longestStreakEver(h)+' days</div>';
+  if(ui.pendingDeleteKind==='habit' && ui.pendingDeleteId===h.id){
+    html+='<div class="confirm-inline" style="margin-top:12px;"><span class="muted">Archive this habit?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="habit" data-id="'+h.id+'">Yes, archive</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
+  } else {
+    html+='<div class="row" style="margin-top:12px;">'+
+      '<button class="btn btn-sm" data-action="edit-habit" data-habit="'+h.id+'">Edit</button>'+
+      '<button class="btn btn-danger-outline btn-sm" data-action="ask-delete" data-kind="habit" data-id="'+h.id+'">Archive habit</button>'+
+      '<button class="btn btn-ghost btn-sm" data-action="expand-habit" data-habit="'+h.id+'">Close</button>'+
+    '</div>';
+  }
+  html+='</div>';
+  return html;
+}
+
+/* =====================================================================
+   RENDER — TASKS
+   ===================================================================== */
+function renderTasks(){
+  var html='';
+  var addInner='';
+  if(ui.showAddTask){
+    addInner='<form data-form="add-task" class="stack">'+
+      '<div class="field"><label for="task-name">Task</label><input type="text" id="task-name" name="name" placeholder="e.g. Send that email" maxlength="80" required></div>'+
+      '<div class="field-row">'+
+        '<div class="field"><label for="task-points">Points</label><input type="number" id="task-points" name="points" value="10" min="1" max="500"></div>'+
+        '<div class="field"><label for="task-deadline">Deadline (optional)</label><input type="date" id="task-deadline" name="deadline"></div>'+
+      '</div>'+
+      '<div class="row"><button type="submit" class="btn btn-sage">Add task</button><button type="button" class="btn btn-ghost" data-action="cancel-add-task">Cancel</button></div>'+
+    '</form>';
+  } else {
+    addInner='<button class="btn btn-sage btn-block" data-action="show-add-task">+ Add a task</button>';
+  }
+  html+=card('New',addInner);
+
+  var open=(state.tasks||[]).filter(function(t){ return !t.done; }).sort(function(a,b){
+    if(a.deadline&&b.deadline) return compareKeys(a.deadline,b.deadline);
+    if(a.deadline) return -1; if(b.deadline) return 1; return 0;
+  });
+  var done=(state.tasks||[]).filter(function(t){ return t.done; }).sort(function(a,b){ return compareKeys(b.completedAt,a.completedAt); }).slice(0,10);
+
+  var openInner='<h2 class="section-title" style="margin-bottom:10px;">Open ('+open.length+')</h2>';
+  if(!open.length){ openInner+='<div class="empty">All caught up.</div>'; }
+  else{
+    openInner+='<div class="stack">';
+    open.forEach(function(task){
+      if(ui.editingTaskId===task.id){
+        openInner+='<div class="edit-panel"><form data-form="edit-task" class="stack">'+
+          '<input type="hidden" name="id" value="'+task.id+'">'+
+          '<div class="field"><label for="et-name-'+task.id+'">Task</label><input type="text" id="et-name-'+task.id+'" name="name" value="'+esc(task.name)+'" maxlength="80" required></div>'+
+          '<div class="field-row">'+
+            '<div class="field"><label for="et-points-'+task.id+'">Points</label><input type="number" id="et-points-'+task.id+'" name="points" value="'+task.points+'" min="1" max="500"></div>'+
+            '<div class="field"><label for="et-deadline-'+task.id+'">Deadline (optional)</label><input type="date" id="et-deadline-'+task.id+'" name="deadline" value="'+(task.deadline||'')+'"></div>'+
+          '</div>'+
+          '<div class="row"><button type="submit" class="btn btn-sage">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-task">Cancel</button></div>'+
+        '</form></div>';
+      } else if(ui.pendingDeleteKind==='task' && ui.pendingDeleteId===task.id){
+        openInner+='<div class="confirm-inline"><span class="muted">Remove "'+esc(task.name)+'"?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="task" data-id="'+task.id+'">Yes, remove</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
+      } else {
+        openInner+='<div class="row-between">'+
+          '<div class="row"><button class="check-circle" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><div><div>'+esc(task.name)+'</div>'+(task.deadline?'<div class="habit-meta">Due '+formatDateHuman(task.deadline)+'</div>':'')+'</div></div>'+
+          '<div class="row"><span class="faint c-gold">+'+task.points+'</span><button class="icon-btn" data-action="edit-task" data-task="'+task.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="task" data-id="'+task.id+'">Remove</button></div>'+
+        '</div>';
+      }
+    });
+    openInner+='</div>';
+  }
+  html+=card(null,openInner);
+
+  if(done.length){
+    var doneInner='<h2 class="section-title" style="margin-bottom:10px;">Recently completed</h2><div class="stack">';
+    done.forEach(function(task){
+      doneInner+='<div class="row-between"><div class="row"><button class="check-circle done" data-action="toggle-task" data-task="'+task.id+'" aria-label="Undo '+esc(task.name)+'">'+checkIconSvg()+'</button><span class="muted">'+esc(task.name)+'</span></div><span class="faint">'+formatDateHuman(task.completedAt)+'</span></div>';
+    });
+    doneInner+='</div>';
+    html+=card(null,doneInner);
+  }
+  return html;
+}
+
+/* =====================================================================
+   RENDER — SHOP
+   ===================================================================== */
+function renderShop(){
+  var d=computeDerived();
+  var html='';
+  var addInner='';
+  if(ui.showAddShopItem){
+    addInner='<form data-form="add-shop-item" class="stack">'+
+      '<div class="field-row">'+
+        '<div class="field" style="flex:2;"><label for="shop-name">Leisure item</label><input type="text" id="shop-name" name="name" placeholder="e.g. 30 min gaming" maxlength="60" required></div>'+
+        '<div class="field"><label for="shop-cost">Cost</label><input type="number" id="shop-cost" name="cost" value="50" min="1" max="100000"></div>'+
+      '</div>'+
+      '<div class="row"><button type="submit" class="btn btn-peri">Add to shop</button><button type="button" class="btn btn-ghost" data-action="cancel-add-shop-item">Cancel</button></div>'+
+    '</form>';
+  } else {
+    addInner='<button class="btn btn-peri btn-block" data-action="show-add-shop-item">+ Add a shop item</button>';
+  }
+  html+=card('New · '+d.points+' points available',addInner);
+
+  var listInner='<h2 class="section-title" style="margin-bottom:10px;">Shop</h2>';
+  if(!state.shopItems.length){ listInner+='<div class="empty">No leisure items yet — add one above.</div>'; }
+  else{
+    listInner+='<div class="stack">';
+    state.shopItems.forEach(function(item,idx){
+      if(ui.editingShopItemId===item.id){
+        listInner+='<div class="edit-panel"><form data-form="edit-shop-item" class="stack">'+
+          '<input type="hidden" name="id" value="'+item.id+'">'+
+          '<div class="field-row">'+
+            '<div class="field" style="flex:2;"><label for="es-name-'+item.id+'">Leisure item</label><input type="text" id="es-name-'+item.id+'" name="name" value="'+esc(item.name)+'" maxlength="60" required></div>'+
+            '<div class="field"><label for="es-cost-'+item.id+'">Cost</label><input type="number" id="es-cost-'+item.id+'" name="cost" value="'+item.cost+'" min="1" max="100000"></div>'+
+          '</div>'+
+          '<div class="row"><button type="submit" class="btn btn-peri">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-shop-item">Cancel</button></div>'+
+        '</form></div>';
+      } else if(ui.pendingDeleteKind==='shop' && ui.pendingDeleteId===item.id){
+        listInner+='<div class="confirm-inline"><span class="muted">Remove "'+esc(item.name)+'"?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="shop" data-id="'+item.id+'">Yes, remove</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
+      } else {
+        var afford=d.points>=item.cost;
+        listInner+='<div class="row-between">'+
+          '<span>'+esc(item.name)+'</span>'+
+          '<div class="row">'+
+            '<span class="faint c-peri">'+item.cost+'p</span>'+
+            '<button class="btn btn-peri btn-sm" data-action="buy-item" data-item="'+item.id+'" '+(afford?'':'disabled')+'>Redeem</button>'+
+            '<button class="icon-btn" data-action="edit-shop-item" data-item="'+item.id+'">Edit</button>'+
+            '<button class="icon-btn" data-action="ask-delete" data-kind="shop" data-id="'+item.id+'">Remove</button>'+
+            '<div class="reorder-col">'+
+              '<button class="reorder-btn" data-action="move-shop-up" data-item="'+item.id+'" '+(idx===0?'disabled':'')+' aria-label="Move up">&#9650;</button>'+
+              '<button class="reorder-btn" data-action="move-shop-down" data-item="'+item.id+'" '+(idx===state.shopItems.length-1?'disabled':'')+' aria-label="Move down">&#9660;</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      }
+    });
+    listInner+='</div>';
+  }
+  html+=card(null,listInner);
+
+  if(state.purchases.length){
+    var histInner='<h2 class="section-title" style="margin-bottom:10px;">Redeemed recently</h2><div class="stack">';
+    state.purchases.slice().reverse().slice(0,8).forEach(function(p){
+      histInner+='<div class="row-between"><span class="muted">'+esc(p.itemName)+'</span><span class="faint">'+formatDateHuman(p.at)+' · -'+p.cost+'p</span></div>';
+    });
+    histInner+='</div>';
+    html+=card(null,histInner);
+  }
+  return html;
+}
+
+/* =====================================================================
+   RENDER — PC TIME
+   ===================================================================== */
+function renderPCTime(){
+  var html='';
+  var freeRemaining=freeMinutesRemainingToday();
+  var emRemaining=emergencyMinutesRemainingThisWeek();
+  var d=computeDerived();
+
+  var budgetInner='<h2 class="section-title" style="margin-bottom:10px;">Budgets</h2>'+
+    '<div class="row-between" style="margin-bottom:4px;"><span class="muted">Daily free time</span><span data-free-remaining>'+formatMinutes(Math.max(0,freeRemaining))+'</span> remaining</div>'+
+    meter(state.pcLedger.dailyFreeMinutes+freeTopupMinutesToday()-Math.max(0,freeRemaining),state.pcLedger.dailyFreeMinutes+freeTopupMinutesToday(),'var(--peri)')+
+    '<div class="faint" style="margin-top:4px;">Budget: '+formatMinutes(state.pcLedger.dailyFreeMinutes)+(freeTopupMinutesToday()>0?' + '+formatMinutes(freeTopupMinutesToday())+' topped up today':'')+'</div>'+
+    '<div style="height:14px;"></div>'+
+    '<div class="row-between" style="margin-bottom:4px;"><span class="muted">Weekly emergency pool</span><span data-emergency-remaining>'+formatMinutes(Math.max(0,emRemaining))+'</span> remaining</div>'+
+    meter(state.pcLedger.weeklyEmergencyMinutes-Math.max(0,emRemaining),state.pcLedger.weeklyEmergencyMinutes,'var(--brick)')+
+    '<div class="row" style="margin-top:14px;"><button class="btn btn-sm" data-action="buy-topup" '+(d.points<state.pcLedger.topupPointCost?'disabled':'')+'>Spend '+state.pcLedger.topupPointCost+'p for +'+state.pcLedger.topupMinutes+'m today</button></div>';
+  html+=card('Ledger',budgetInner);
+
+  var sessionInner='';
+  if(state.pcLedger.activeTimer){
+    sessionInner=renderActiveTimerBlock().replace('<div class="divider"></div>','');
+  } else if(ui.showEmergencyStartForm){
+    sessionInner='<form data-form="start-emergency" class="stack">'+
+      '<div class="field"><label for="em-reason">Reason for emergency time</label><textarea id="em-reason" name="reason" placeholder="Why do you need this now?" required></textarea></div>'+
+      '<div class="row"><button type="submit" class="btn btn-brick">Start emergency session</button><button type="button" class="btn btn-ghost" data-action="cancel-emergency-start">Cancel</button></div>'+
+    '</form>';
+  } else {
+    sessionInner='<div class="row">'+
+      '<button class="btn btn-peri" data-action="start-timer" data-type="free">Start free session</button>'+
+      '<button class="btn btn-brick" data-action="show-emergency-start">Start emergency session</button>'+
+    '</div>';
+  }
+  html+=card('Session',sessionInner);
+
+  var manualInner='';
+  if(ui.showManualLogForm){
+    manualInner='<form data-form="manual-log" class="stack">'+
+      '<div class="field-row">'+
+        '<div class="field"><label for="ml-minutes">Minutes</label><input type="number" id="ml-minutes" name="minutes" value="15" min="1" max="1440"></div>'+
+        '<div class="field"><label>Type</label><div class="seg"><input type="radio" name="type" id="ml-free" value="free" checked><label for="ml-free">Free</label><input type="radio" name="type" id="ml-em" value="emergency"><label for="ml-em">Emergency</label></div></div>'+
+      '</div>'+
+      '<div class="field"><label for="ml-reason">Reason (required for emergency)</label><textarea id="ml-reason" name="reason" placeholder="Only needed for emergency time"></textarea></div>'+
+      '<div class="row"><button type="submit" class="btn btn-sage">Log session</button><button type="button" class="btn btn-ghost" data-action="cancel-manual-log">Cancel</button></div>'+
+    '</form>';
+  } else {
+    manualInner='<button class="btn btn-block" data-action="show-manual-log">+ Log a session after the fact</button>';
+  }
+  html+=card('Manual entry',manualInner);
+
+  var hist=state.pcLedger.sessions.slice(0,ui.historyLimit);
+  var histInner='<h2 class="section-title" style="margin-bottom:10px;">History</h2>';
+  if(!hist.length){ histInner+='<div class="empty">No sessions logged yet.</div>'; }
+  else{
+    histInner+='<div class="stack">';
+    hist.forEach(function(s){
+      histInner+='<div>'+
+        '<div class="row-between"><span>'+(s.type==='emergency'?'<span class="c-brick">Emergency</span>':'<span class="c-peri">Free</span>')+' · '+formatMinutes(s.minutes)+'</span><span class="faint">'+formatDateHuman(s.dateKey)+'</span></div>'+
+        (s.reason?'<div class="faint" style="margin-top:2px;">"'+esc(s.reason)+'"</div>':'')+
+      '</div>';
+    });
+    histInner+='</div>';
+    if(state.pcLedger.sessions.length>ui.historyLimit){
+      histInner+='<div style="margin-top:10px;"><button class="btn btn-sm" data-action="show-more-history">Show more</button></div>';
+    }
+  }
+  html+=card(null,histInner);
+  return html;
+}
+
+/* =====================================================================
+   RENDER — STATS
+   ===================================================================== */
+function renderStats(){
+  var html='';
+  var days=[]; var k=todayKey();
+  for(var i=6;i>=0;i--) days.push(addDaysKey(k,-i));
+  var maxPts=1;
+  var dayPoints=days.map(function(dk){
+    var pts=0;
+    (state.habits||[]).forEach(function(h){ if(h.completions.hasOwnProperty(dk)) pts+=h.completions[dk]; });
+    (state.tasks||[]).forEach(function(t){ if(t.completedAt===dk) pts+=t.pointsAwarded; });
+    if(pts>maxPts) maxPts=pts;
+    return pts;
+  });
+  var chartInner='<h2 class="section-title" style="margin-bottom:0;">Points — last 7 days</h2><div class="bar-chart">';
+  days.forEach(function(dk,idx){
+    var h=Math.max(3,Math.round((dayPoints[idx]/maxPts)*90));
+    chartInner+='<div class="bar-col"><div class="bar-shape" style="height:'+h+'px;"></div><div class="bar-col-label">'+dayPoints[idx]+'</div><div class="bar-col-label">'+formatDateHuman(dk).split(' ')[1]+'</div></div>';
+  });
+  chartInner+='</div>';
+  html+=card(null,chartInner);
+
+  var active=(state.habits||[]).filter(function(h){ return !h.archived; });
+  var last30=[]; for(var j=29;j>=0;j--) last30.push(addDaysKey(k,-j));
+  var possible=0, completed=0;
+  active.forEach(function(h){
+    last30.forEach(function(dk){
+      if(compareKeys(dk,h.createdAt)<0) return;
+      possible++;
+      if(isCoveredDay(h,dk)) completed++;
+    });
+  });
+  var rate=possible>0?Math.round((completed/possible)*100):0;
+  var rateInner='<h2 class="section-title" style="margin-bottom:10px;">30-day completion rate</h2>'+
+    '<div class="row-between" style="margin-bottom:6px;"><span class="hud-stat-val c-sage">'+rate+'%</span><span class="faint">'+completed+' / '+possible+' habit-days</span></div>'+
+    meter(completed,Math.max(1,possible),'var(--sage)');
+  html+=card(null,rateInner);
+
+  var wk=weekKeyFor(k);
+  var emSessions=sessionsForWeek(wk).filter(function(s){ return s.type==='emergency'; });
+  var emInner='<h2 class="section-title" style="margin-bottom:10px;">Emergency hours this week</h2>';
+  if(!emSessions.length){ emInner+='<div class="empty">No emergency time used this week.</div>'; }
+  else{
+    emInner+='<div class="stack">';
+    emSessions.forEach(function(s){
+      emInner+='<div><div class="row-between"><span class="c-brick">'+formatMinutes(s.minutes)+'</span><span class="faint">'+formatDateHuman(s.dateKey)+'</span></div>'+(s.reason?'<div class="faint">"'+esc(s.reason)+'"</div>':'')+'</div>';
+    });
+    emInner+='</div>';
+  }
+  html+=card('Pattern review',emInner);
+
+  var achvInner='<h2 class="section-title" style="margin-bottom:10px;">Achievements</h2><div class="achv-grid">';
+  var unlockedIds=(state.achievements||[]).map(function(a){return a.id;});
+  ACHIEVEMENTS.forEach(function(a){
+    var isUnlocked=unlockedIds.indexOf(a.id)!==-1;
+    achvInner+='<div class="achv'+(isUnlocked?'':' locked')+'"><div class="achv-name">'+a.name+'</div><div class="faint">'+a.desc+'</div></div>';
+  });
+  achvInner+='</div>';
+  html+=card(null,achvInner);
+
+  var d=computeDerived();
+  var totalsInner='<h2 class="section-title" style="margin-bottom:12px;">Lifetime totals</h2><div class="totals-grid">'+
+    '<div class="totals-cell"><div class="totals-val">'+d.xp+'</div><div class="totals-label">Total XP earned</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+d.totalCompletions+'</div><div class="totals-label">Habit check-ins</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+d.tasksCompleted+'</div><div class="totals-label">Tasks completed</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+d.pointsSpent+'</div><div class="totals-label">Points spent</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+(state.luckyBonusCount||0)+'</div><div class="totals-label">Lucky bonuses hit</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+d.bestStreakEver+'</div><div class="totals-label">Longest streak ever</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+unlockedIds.length+' / '+ACHIEVEMENTS.length+'</div><div class="totals-label">Achievements</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+d.emergencySessionsLogged+'</div><div class="totals-label">Emergency sessions logged</div></div>'+
+  '</div>';
+  html+=card(null,totalsInner);
+  return html;
+}
+
+/* =====================================================================
+   RENDER — SETTINGS
+   ===================================================================== */
+function renderSettings(){
+  var html='';
+  var formInner='<form data-form="settings" class="stack">'+
+    '<fieldset><legend>Habit point values</legend><div class="field-row">'+
+      '<div class="field"><label for="s-easy">Easy</label><input type="number" id="s-easy" name="easy" value="'+state.settings.difficultyPoints.easy+'" min="1"></div>'+
+      '<div class="field"><label for="s-medium">Medium</label><input type="number" id="s-medium" name="medium" value="'+state.settings.difficultyPoints.medium+'" min="1"></div>'+
+      '<div class="field"><label for="s-hard">Hard</label><input type="number" id="s-hard" name="hard" value="'+state.settings.difficultyPoints.hard+'" min="1"></div>'+
+    '</div></fieldset>'+
+    '<fieldset><legend>PC time budgets</legend>'+
+      '<div class="field"><label for="s-daily">Daily free minutes</label><input type="number" id="s-daily" name="dailyFreeMinutes" value="'+state.pcLedger.dailyFreeMinutes+'" min="0"></div>'+
+      '<div class="field"><label for="s-weekly">Weekly emergency minutes</label><input type="number" id="s-weekly" name="weeklyEmergencyMinutes" value="'+state.pcLedger.weeklyEmergencyMinutes+'" min="0"></div>'+
+      '<div class="field-row">'+
+        '<div class="field"><label for="s-topcost">Topup cost (points)</label><input type="number" id="s-topcost" name="topupPointCost" value="'+state.pcLedger.topupPointCost+'" min="1"></div>'+
+        '<div class="field"><label for="s-topmin">Topup grants (minutes)</label><input type="number" id="s-topmin" name="topupMinutes" value="'+state.pcLedger.topupMinutes+'" min="1"></div>'+
+      '</div>'+
+    '</fieldset>'+
+    '<fieldset><legend>Points economy</legend>'+
+      '<div class="field"><label for="s-cap">Points cap (0 = unlimited, accumulate freely)</label><input type="number" id="s-cap" name="pointsCap" value="'+state.settings.pointsCap+'" min="0"></div>'+
+    '</fieldset>'+
+    '<button type="submit" class="btn btn-primary btn-block">Save settings</button>'+
+  '</form>';
+  html+=card('Configuration',formInner);
+
+  var dataInner='<h2 class="section-title" style="margin-bottom:10px;">Your data</h2>'+
+    storageStatusLine()+
+    '<p class="muted" style="margin-top:0;font-size:13px;">Export a backup any time, or move it to another device by exporting here and importing there.</p>'+
+    '<div class="row"><button class="btn" data-action="export-data">Export JSON backup</button><button class="btn" data-action="trigger-import">Import JSON backup</button></div>'+
+    '<input type="file" id="import-file-input" accept="application/json" style="display:none;">';
+  html+=card(null,dataInner);
+
+  var dangerInner='<h2 class="section-title" style="margin-bottom:10px;color:var(--brick-soft);">Danger zone</h2>';
+  if(ui.showResetConfirm){
+    dangerInner+='<p class="muted" style="font-size:13px;">This deletes every habit, task, streak, and point permanently. This cannot be undone. Are you sure?</p>'+
+      '<div class="row"><button class="btn btn-brick" data-action="confirm-reset">Yes, delete everything</button><button class="btn btn-ghost" data-action="cancel-reset">Cancel</button></div>';
+  } else {
+    dangerInner+='<button class="btn btn-danger-outline" data-action="show-reset">Reset all data</button>';
+  }
+  html+=card(null,dangerInner);
+  return html;
+}
+
+/* =====================================================================
+   RENDER — RECAP MODAL / TOAST
+   ===================================================================== */
+function renderRecapModal(){
+  if(!ui.showRecap||!ui.recapData) return '';
+  var r=ui.recapData;
+  return '<div class="overlay" data-action="dismiss-recap-overlay"><div class="modal" data-action="noop">'+
+    '<h2 class="section-title">Recap · '+formatDateHuman(r.dateKey)+'</h2>'+
+    '<div class="recap-stat"><span class="muted">Habits completed</span><span>'+r.habitsDone+' / '+r.habitsTotal+'</span></div>'+
+    '<div class="recap-stat"><span class="muted">Points earned</span><span class="c-gold">+'+r.points+'</span></div>'+
+    '<div class="recap-stat"><span class="muted">PC time logged</span><span>'+formatMinutes(r.pcMinutes)+'</span></div>'+
+    '<button class="btn btn-primary btn-block" style="margin-top:16px;" data-action="dismiss-recap">Got it</button>'+
+  '</div></div>';
+}
+function renderImportConfirmModal(){
+  if(!ui.showImportConfirm) return '';
+  return '<div class="overlay" data-action="cancel-import"><div class="modal" data-action="noop">'+
+    '<h2 class="section-title">Replace current data?</h2>'+
+    '<p class="muted" style="font-size:13.5px;">Importing will replace everything currently in the app with the contents of this backup file. This cannot be undone.</p>'+
+    '<div class="row" style="margin-top:14px;"><button class="btn btn-primary" data-action="confirm-import">Replace data</button><button class="btn btn-ghost" data-action="cancel-import">Cancel</button></div>'+
+  '</div></div>';
+}
+function renderToastEl(){
+  if(!ui.toast) return '';
+  var cls='toast'+(ui.toastVariant==='levelup'?' toast-levelup':'');
+  return '<div class="'+cls+'">'+esc(ui.toast)+'</div>';
+}
+
+/* =====================================================================
+   TOP-LEVEL RENDER
+   ===================================================================== */
+function renderTabContent(){
+  switch(ui.activeTab){
+    case 'today': return renderToday();
+    case 'habits': return renderHabits();
+    case 'tasks': return renderTasks();
+    case 'shop': return renderShop();
+    case 'pctime': return renderPCTime();
+    case 'stats': return renderStats();
+    case 'settings': return renderSettings();
+    default: return '';
+  }
+}
+function render(){
+  var app=document.getElementById('app');
+  if(!app) return;
+  appRendered=true;
+  var html='';
+  html+=renderHeader();
+  html+=renderTabs();
+  html+='<div id="tab-content">'+renderTabContent()+'</div>';
+  html+=renderRecapModal();
+  html+=renderImportConfirmModal();
+  html+=renderToastEl();
+  app.innerHTML=html;
+}
+
+/* =====================================================================
+   EVENT DELEGATION
+   ===================================================================== */
+function onClick(e){
+  var el=e.target.closest('[data-action]');
+  if(!el) return;
+  var action=el.getAttribute('data-action');
+  switch(action){
+    case 'set-tab':
+      ui.activeTab=el.getAttribute('data-tab'); ui.expandedHabitId=null;
+      ui.editingHabitId=null; ui.editingTaskId=null; ui.editingShopItemId=null;
+      ui.pendingDeleteKind=null; ui.pendingDeleteId=null;
+      render();
+      break;
+    case 'goto-settings': ui.activeTab='settings'; render(); break;
+    case 'toggle-habit': toggleHabitDay(el.getAttribute('data-habit'),el.getAttribute('data-date')); break;
+    case 'expand-habit':
+      var hid=el.getAttribute('data-habit');
+      ui.expandedHabitId=(ui.expandedHabitId===hid)?null:hid;
+      ui.calMonthOffset=0;
+      ui.editingHabitId=null;
+      ui.pendingDeleteKind=null; ui.pendingDeleteId=null;
+      render();
+      break;
+    case 'cal-prev': ui.calMonthOffset--; render(); break;
+    case 'cal-next': if(ui.calMonthOffset<0){ui.calMonthOffset++; render();} break;
+    case 'use-freeze': useStreakFreeze(el.getAttribute('data-habit')); break;
+    case 'show-add-habit': ui.showAddHabit=true; render(); break;
+    case 'cancel-add-habit': ui.showAddHabit=false; render(); break;
+    case 'edit-habit': ui.editingHabitId=el.getAttribute('data-habit'); render(); break;
+    case 'cancel-edit-habit': ui.editingHabitId=null; render(); break;
+    case 'move-habit-up': moveHabit(el.getAttribute('data-habit'),-1); break;
+    case 'move-habit-down': moveHabit(el.getAttribute('data-habit'),1); break;
+    case 'toggle-task': toggleTask(el.getAttribute('data-task')); break;
+    case 'show-add-task': ui.showAddTask=true; render(); break;
+    case 'cancel-add-task': ui.showAddTask=false; render(); break;
+    case 'edit-task': ui.editingTaskId=el.getAttribute('data-task'); render(); break;
+    case 'cancel-edit-task': ui.editingTaskId=null; render(); break;
+    case 'buy-item': buyShopItem(el.getAttribute('data-item')); break;
+    case 'show-add-shop-item': ui.showAddShopItem=true; render(); break;
+    case 'cancel-add-shop-item': ui.showAddShopItem=false; render(); break;
+    case 'edit-shop-item': ui.editingShopItemId=el.getAttribute('data-item'); render(); break;
+    case 'cancel-edit-shop-item': ui.editingShopItemId=null; render(); break;
+    case 'move-shop-up': moveShopItem(el.getAttribute('data-item'),-1); break;
+    case 'move-shop-down': moveShopItem(el.getAttribute('data-item'),1); break;
+    case 'ask-delete':
+      ui.pendingDeleteKind=el.getAttribute('data-kind');
+      ui.pendingDeleteId=el.getAttribute('data-id');
+      render();
+      break;
+    case 'cancel-delete': ui.pendingDeleteKind=null; ui.pendingDeleteId=null; render(); break;
+    case 'confirm-delete':
+      var dk=el.getAttribute('data-kind'), di=el.getAttribute('data-id');
+      if(dk==='task') deleteTask(di);
+      else if(dk==='shop') deleteShopItem(di);
+      else if(dk==='habit') archiveHabit(di);
+      break;
+    case 'start-timer': startTimer(el.getAttribute('data-type'),null); break;
+    case 'stop-timer': stopTimer(); break;
+    case 'cancel-timer': cancelTimer(); break;
+    case 'show-emergency-start': ui.showEmergencyStartForm=true; render(); break;
+    case 'cancel-emergency-start': ui.showEmergencyStartForm=false; render(); break;
+    case 'show-manual-log': ui.showManualLogForm=true; render(); break;
+    case 'cancel-manual-log': ui.showManualLogForm=false; render(); break;
+    case 'buy-topup': buyTopup(); break;
+    case 'show-more-history': ui.historyLimit+=30; render(); break;
+    case 'export-data': exportData(); break;
+    case 'trigger-import': document.getElementById('import-file-input').click(); break;
+    case 'show-reset': ui.showResetConfirm=true; render(); break;
+    case 'cancel-reset': ui.showResetConfirm=false; render(); break;
+    case 'confirm-reset': resetAllData(); break;
+    case 'dismiss-recap': ui.showRecap=false; persist(); render(); break;
+    case 'dismiss-recap-overlay': ui.showRecap=false; persist(); render(); break;
+    case 'confirm-import': importDataConfirmed(); break;
+    case 'cancel-import': ui.showImportConfirm=false; ui.pendingImportData=null; render(); break;
+  }
+}
+function onSubmit(e){
+  var form=e.target.closest('[data-form]');
+  if(!form) return;
+  e.preventDefault();
+  var type=form.getAttribute('data-form');
+  var fd=new FormData(form);
+  switch(type){
+    case 'add-habit': addHabit(fd.get('name'),fd.get('difficulty'),fd.get('category')); break;
+    case 'edit-habit': updateHabit(fd.get('id'),fd.get('name'),fd.get('difficulty'),fd.get('category')); break;
+    case 'add-task': addTask(fd.get('name'),fd.get('points'),fd.get('deadline')); break;
+    case 'edit-task': editTask(fd.get('id'),fd.get('name'),fd.get('points'),fd.get('deadline')); break;
+    case 'add-shop-item': addShopItem(fd.get('name'),fd.get('cost')); break;
+    case 'edit-shop-item': editShopItem(fd.get('id'),fd.get('name'),fd.get('cost')); break;
+    case 'start-emergency': startTimer('emergency',fd.get('reason')); break;
+    case 'manual-log': logManualSession(fd.get('type'),fd.get('minutes'),fd.get('reason')); break;
+    case 'settings':
+      updateSettings({
+        easy:fd.get('easy'), medium:fd.get('medium'), hard:fd.get('hard'),
+        dailyFreeMinutes:fd.get('dailyFreeMinutes'), weeklyEmergencyMinutes:fd.get('weeklyEmergencyMinutes'),
+        topupPointCost:fd.get('topupPointCost'), topupMinutes:fd.get('topupMinutes'),
+        pointsCap:fd.get('pointsCap')
+      });
+      break;
+  }
+}
+function onChange(e){
+  if(e.target && e.target.id==='import-file-input' && e.target.files && e.target.files[0]){
+    var reader=new FileReader();
+    reader.onload=function(evt){
+      try{
+        var parsed=JSON.parse(evt.target.result);
+        if(!parsed || typeof parsed!=='object' || !('habits' in parsed)){
+          queueToast('That file doesn\'t look like an Ascend backup'); render(); return;
+        }
+        ui.pendingImportData=parsed;
+        ui.showImportConfirm=true;
+        render();
+      }catch(err){ queueToast('Could not read that file'); render(); }
+    };
+    reader.readAsText(e.target.files[0]);
+  }
+}
+
+/* =====================================================================
+   INIT — a watchdog guarantees the app renders within a few seconds no
+   matter what happens with storage detection, so it can never get stuck
+   on the loading screen.
+   ===================================================================== */
+var appRendered=false;
+var listenersAttached=false;
+function attachListenersOnce(){
+  if(listenersAttached) return;
+  listenersAttached=true;
+  document.addEventListener('click',onClick);
+  document.addEventListener('submit',onSubmit);
+  document.addEventListener('change',onChange);
+}
+function finishInit(loaded,warn){
+  state=normalizeState(loaded||defaultState());
+  checkNewDay();
+  checkAchievements();
+  if(warn) ui.toast='Started a fresh session — reload if you expected saved progress';
+  persist();
+  render();
+  attachListenersOnce();
+  if(state.pcLedger.activeTimer) startTimerTick();
+  if(warn){
+    if(toastTimeoutHandle) clearTimeout(toastTimeoutHandle);
+    toastTimeoutHandle=setTimeout(function(){ ui.toast=null; render(); },5000);
+  }
+}
+function init(){
+  var watchdog=setTimeout(function(){
+    if(!appRendered){
+      console.error('Ascend: init did not complete in time, starting a fresh in-memory session');
+      finishInit(null,true);
+    }
+  },4000);
+  loadState().then(function(loaded){
+    clearTimeout(watchdog);
+    if(!appRendered) finishInit(loaded,false);
+  }).catch(function(e){
+    clearTimeout(watchdog);
+    if(!appRendered){
+      console.error('Ascend: load failed, starting fresh', e);
+      finishInit(null,true);
+    }
+  });
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',init);
+} else {
+  init();
+}
+
+/* expose for automated testing harness only (no-op in normal use) */
+window.__ascendTestHooks={ getState:function(){return state;}, getUi:function(){return ui;}, getStorageMode:function(){return storageMode;} };
+
+})();
+</script>
+<script>
+/* Registers the service worker when this file is served from a real
+   web origin (e.g. GitHub Pages). Harmless no-op anywhere else — it's
+   wrapped in a try/catch so it never breaks the app if the browser or
+   environment doesn't support it (like inside a chat preview). */
+(function(){
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      try{
+        navigator.serviceWorker.register('service-worker.js').catch(function(){ /* not on a supported origin — ignore */ });
+      }catch(e){ /* ignore */ }
+    });
+  }
+})();
+</script>
+</body>
+</html>
