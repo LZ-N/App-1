@@ -8,6 +8,9 @@
   "orientation": "portrait-primary",
   "background_color": "#12160F",
   "theme_color": "#12160F",
+  "shortcuts": [
+    { "name": "At a glance", "short_name": "Glance", "url": "./index.html#glance" }
+  ],
   "icons": [
     {
       "src": "icon-192.png",

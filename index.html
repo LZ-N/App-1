@@ -268,6 +268,13 @@
   .totals-cell{border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
   .totals-val{font-family:var(--font-display);font-size:20px;font-variant-numeric:tabular-nums;color:var(--gold-soft);}
   .totals-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-top:2px;}
+
+  .diff-tiny{color:var(--text-muted);} .diff-intense{color:#E0955C;} .diff-epic{color:var(--peri-soft);}
+  .cog-btn{display:flex;align-items:center;justify-content:center;padding:6px;line-height:0;}
+  .wheel-wrap{position:relative;width:150px;margin:6px auto 12px;}
+  .wheel-wrap::before{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top:14px solid var(--text);z-index:2;}
+  .wheel-wrap svg{width:100%;display:block;}
+  .chal-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 </style>
 </head>
 <body>
@@ -281,7 +288,25 @@
    CONSTANTS
    ===================================================================== */
 var STORAGE_KEY = 'ascend_state_v1';
-var DIFFICULTY_POINTS = { easy: 5, medium: 10, hard: 20 };
+var TIERS = [
+  { id:'tiny', label:'Tiny', pts:2, coin:0 },
+  { id:'easy', label:'Easy', pts:5, coin:2 },
+  { id:'medium', label:'Medium', pts:10, coin:5 },
+  { id:'hard', label:'Hard', pts:20, coin:10 },
+  { id:'intense', label:'Intense', pts:35, coin:15 },
+  { id:'epic', label:'Epic', pts:50, coin:25 }
+];
+var DIFFICULTY_POINTS = {}; TIERS.forEach(function(t){ DIFFICULTY_POINTS[t.id]=t.pts; });
+var DEFAULT_COIN_CAP = 1000, DEFAULT_DAILY_COIN_CAP = 100; /* cents */
+var WHEEL_MISSIONS = [
+  ['Stretch for 20 minutes',20,5],['Read 1 chapter of a book',20,5],['Go for a run or jog',30,10],
+  ['Take a 30-minute walk',25,5],['Do 20 push-ups (any sets)',20,5],['Tidy your desk or room for 10 minutes',15,0],
+  ['Drink 2 litres of water today',15,0],['Meditate for 10 minutes',20,5],['Cook a proper meal from scratch',25,10],
+  ['Call or message a friend or family',15,0],['Take a cold shower',20,5],['Write a page in a journal',15,0],
+  ['Declutter one drawer or shelf',20,5],['No phone for the first hour after waking',25,5],
+  ['Do a 15-minute workout',25,10],['Plank for 3 minutes in total',20,5]
+];
+var DEFAULT_CHALLENGES = [['Take a walk — 1 km',8],['Do 10 push-ups',5],['Drink a glass of water',2]];
 var DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
 var MONTH_LABELS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 var CATEGORIES = [
@@ -305,7 +330,8 @@ var ACHIEVEMENTS = [
   { id:'level20', name:'Level 20', desc:'Reach level 20', check:function(s,d){ return d.level>=20; } },
   { id:'task_master', name:'Task Master', desc:'Complete 25 one-off tasks', check:function(s,d){ return d.tasksCompleted>=25; } },
   { id:'big_spender', name:'Big Spender', desc:'Make your first shop purchase', check:function(s,d){ return s.purchases.length>=1; } },
-  { id:'mindful_logger', name:'Mindful Logger', desc:'Log 10 emergency sessions with a reason', check:function(s,d){ return d.emergencySessionsLogged>=10; } },
+  { id:'challenger', name:'Challenger', desc:'Log 25 challenges', check:function(s,d){ return d.challengesDone>=25; } },
+  { id:'wheel_regular', name:'Wheel Regular', desc:'Claim 7 wheel prizes', check:function(s,d){ return d.wheelsDone>=7; } },
   { id:'lucky_break', name:'Lucky Break', desc:'Hit your first lucky bonus', check:function(s,d){ return (s.luckyBonusCount||0)>=1; } },
   { id:'four_leaf', name:'Four-Leaf Clover', desc:'Hit 10 lucky bonuses', check:function(s,d){ return (s.luckyBonusCount||0)>=10; } },
   { id:'specialist', name:'Specialist', desc:'Reach level 5 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=5; }); } },
@@ -323,6 +349,9 @@ var ui = {
   showAddHabit:false,
   showAddTask:false,
   showAddShopItem:false,
+  showAddChallenge:false,
+  spinning:false,
+  spinAngle:0,
   showEmergencyStartForm:false,
   showManualLogForm:false,
   showImportConfirm:false,
@@ -388,6 +417,11 @@ function defaultState(){
     ],
     purchases:[],
     topups:[],
+    challenges:DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1] }; }),
+    challengeLogs:[],
+    wheel:null,
+    wheelLog:[],
+    wallet:{ cents:0, daily:{}, spent:[] },
     luckyBonusCount:0,
     pcLedger:{
       dailyFreeMinutes:120,
@@ -399,11 +433,14 @@ function defaultState(){
     },
     achievements:[],
     settings:{
-      difficultyPoints:{ easy:5, medium:10, hard:20 },
-      pointsCap:0
+      difficultyPoints:DIFFICULTY_POINTS_COPY(),
+      pointsCap:0,
+      coinCapCents:DEFAULT_COIN_CAP,
+      dailyCoinCapCents:DEFAULT_DAILY_COIN_CAP
     }
   };
 }
+function DIFFICULTY_POINTS_COPY(){ var o={}; TIERS.forEach(function(t){ o[t.id]=t.pts; }); return o; }
 var uidCounter=0;
 function uid(){ uidCounter++; return Date.now().toString(36)+'_'+uidCounter+'_'+Math.random().toString(36).slice(2,7); }
 
@@ -588,6 +625,8 @@ function computeDerived(){
   (state.tasks||[]).forEach(function(t){
     if(t.done){ totalXp+=t.pointsAwarded||0; tasksCompleted++; }
   });
+  (state.challengeLogs||[]).forEach(function(l){ totalXp+=l.points||0; });
+  (state.wheelLog||[]).forEach(function(l){ totalXp+=l.points||0; });
   var spent=0;
   (state.purchases||[]).forEach(function(p){ spent+=p.cost; });
   (state.topups||[]).forEach(function(t){ spent+=t.pointsSpent; });
@@ -603,6 +642,8 @@ function computeDerived(){
     totalCompletions:totalCompletions,
     tasksCompleted:tasksCompleted,
     emergencySessionsLogged:emergencySessionsLogged,
+    challengesDone:(state.challengeLogs||[]).length,
+    wheelsDone:(state.wheelLog||[]).length,
     bestStreak:bestStreakAcrossHabits(),
     bestStreakEver:longestStreakEverAcrossHabits(),
     level:li.level,
@@ -704,6 +745,121 @@ function queueLevelUpToast(level){
   toastTimeoutHandle=setTimeout(function(){ ui.toast=null; ui.toastVariant=null; render(); },4500);
 }
 
+function validTier(d){ return TIERS.some(function(t){ return t.id===d; }); }
+function tierInfo(id){ return TIERS.filter(function(t){ return t.id===id; })[0]||TIERS[2]; }
+function tierSelectHtml(id,name,sel){
+  var h='<select id="'+id+'" name="'+name+'">';
+  TIERS.forEach(function(t){ h+='<option value="'+t.id+'" '+(t.id===sel?'selected':'')+'>'+t.label+' ('+((state.settings.difficultyPoints&&state.settings.difficultyPoints[t.id])||t.pts)+'p)</option>'; });
+  return h+'</select>';
+}
+function tierFieldsHtml(){
+  var h='<fieldset><legend>Habit point values</legend><div class="field-row" style="flex-wrap:wrap;">';
+  TIERS.forEach(function(t){ h+='<div class="field" style="flex:1 1 30%;"><label for="s-'+t.id+'">'+t.label+'</label><input type="number" id="s-'+t.id+'" name="'+t.id+'" value="'+state.settings.difficultyPoints[t.id]+'" min="1"></div>'; });
+  return h+'</div></fieldset>';
+}
+
+/* ---- coins (cents internally, shown as $) ---- */
+function fmtMoney(c){ return '$'+(c/100).toFixed(2); }
+function coinRoom(dateKey){
+  var w=state.wallet;
+  return Math.max(0,Math.min(state.settings.coinCapCents-w.cents, state.settings.dailyCoinCapCents-(w.daily[dateKey]||0)));
+}
+function awardCoins(cents,dateKey){
+  if(cents<=0 || dateKey!==todayKey()) return 0;
+  var a=Math.min(cents,coinRoom(dateKey));
+  if(a<=0) return 0;
+  var w=state.wallet; w.cents+=a; w.daily[dateKey]=(w.daily[dateKey]||0)+a;
+  return a;
+}
+function revokeCoins(a,dateKey){
+  if(!a) return;
+  var w=state.wallet; w.cents=Math.max(0,w.cents-a); w.daily[dateKey]=Math.max(0,(w.daily[dateKey]||0)-a);
+}
+function spendCoins(name,cents){
+  name=(name||'').trim();
+  if(!name || !(cents>0) || cents>state.wallet.cents) { queueToast('Not enough coins for that'); render(); return; }
+  state.wallet.cents-=cents;
+  state.wallet.spent.push({ id:uid(), name:name.slice(0,60), cents:cents, at:todayKey() });
+  persist(); render();
+  queueToast('Spent '+fmtMoney(cents)+' on '+name);
+}
+function extraPointsOn(dk){
+  var p=0;
+  (state.challengeLogs||[]).forEach(function(l){ if(l.dateKey===dk) p+=l.points||0; });
+  (state.wheelLog||[]).forEach(function(l){ if(l.dateKey===dk) p+=l.points||0; });
+  return p;
+}
+
+/* ---- repeatable challenges ---- */
+function addChallenge(name,points){
+  name=(name||'').trim(); if(!name) return;
+  state.challenges.push({ id:uid(), name:name.slice(0,60), points:clampInt(points,1,500,5) });
+  ui.showAddChallenge=false; persist(); render();
+}
+function challengeCountToday(id){
+  var t=todayKey();
+  return state.challengeLogs.filter(function(l){ return l.challengeId===id && l.dateKey===t; }).length;
+}
+function logChallenge(id){
+  var c=state.challenges.filter(function(x){ return x.id===id; })[0];
+  if(!c) return;
+  var lb=computeDerived().level, t=todayKey();
+  var coins=awardCoins(Math.round(c.points/4),t);
+  state.challengeLogs.push({ id:uid(), challengeId:id, name:c.name, points:c.points, coins:coins, dateKey:t });
+  checkAchievements();
+  var la=computeDerived().level;
+  if(la>lb) queueLevelUpToast(la); else queueToast('+'+c.points+'p'+(coins?' \u00b7 +'+fmtMoney(coins):''));
+  persist(); render();
+}
+function undoChallenge(id){
+  var t=todayKey();
+  for(var i=state.challengeLogs.length-1;i>=0;i--){
+    var l=state.challengeLogs[i];
+    if(l.challengeId===id && l.dateKey===t){ revokeCoins(l.coins,t); state.challengeLogs.splice(i,1); break; }
+  }
+  persist(); render();
+}
+function deleteChallenge(id){
+  state.challenges=state.challenges.filter(function(c){ return c.id!==id; });
+  ui.pendingDeleteKind=null; ui.pendingDeleteId=null; persist(); render();
+}
+
+/* ---- daily wheel ---- */
+function wheelToday(){ var w=state.wheel; return (w && w.dateKey===todayKey())?w:null; }
+function spinWheel(){
+  if(wheelToday() || ui.spinning) return;
+  var m=WHEEL_MISSIONS[Math.floor(Math.random()*WHEEL_MISSIONS.length)];
+  var angle=360*5+Math.floor(Math.random()*360);
+  ui.spinning=true; ui.spinAngle=angle;
+  var el=document.getElementById('wheel-svg');
+  if(el){ el.style.transition='transform 3.2s cubic-bezier(.17,.67,.2,1)'; void el.offsetWidth; el.style.transform='rotate('+angle+'deg)'; }
+  setTimeout(function(){
+    ui.spinning=false;
+    state.wheel={ dateKey:todayKey(), mission:m[0], points:m[1], coins:m[2], status:'pending' };
+    persist(); render();
+  },3300);
+}
+function claimWheel(){
+  var w=wheelToday();
+  if(!w || w.status!=='pending') return;
+  var lb=computeDerived().level;
+  var coins=awardCoins(w.coins,todayKey());
+  w.status='done';
+  state.wheelLog.push({ id:uid(), dateKey:todayKey(), name:w.mission, points:w.points, coins:coins });
+  checkAchievements();
+  var la=computeDerived().level;
+  if(la>lb) queueLevelUpToast(la); else queueToast('Wheel prize! +'+w.points+'p'+(coins?' \u00b7 +'+fmtMoney(coins):''));
+  persist(); render();
+}
+function wheelSvg(){
+  var s='<svg id="wheel-svg" viewBox="0 0 200 200" style="transform:rotate('+(ui.spinning?ui.spinAngle:0)+'deg)">';
+  for(var i=0;i<8;i++){
+    var a0=(i*45-90)*Math.PI/180, a1=((i+1)*45-90)*Math.PI/180;
+    s+='<path d="M100 100L'+(100+90*Math.cos(a0)).toFixed(1)+' '+(100+90*Math.sin(a0)).toFixed(1)+'A90 90 0 0 1 '+(100+90*Math.cos(a1)).toFixed(1)+' '+(100+90*Math.sin(a1)).toFixed(1)+'Z" fill="'+(i%2?'#7FA872':'#C9A227')+'" stroke="#12160F" stroke-width="2"/>';
+  }
+  return s+'<circle cx="100" cy="100" r="12" fill="#12160F"/></svg>';
+}
+
 /* =====================================================================
    GROWTH GLYPH (signature SVG element)
    ===================================================================== */
@@ -730,7 +886,7 @@ function growthGlyph(level){
 function addHabit(name,difficulty,category){
   name=(name||'').trim();
   if(!name) return;
-  if(['easy','medium','hard'].indexOf(difficulty)===-1) difficulty='medium';
+  if(!validTier(difficulty)) difficulty='medium';
   if(CATEGORIES.filter(function(c){return c.id===category;}).length===0) category='other';
   state.habits.push({ id:uid(), name:name.slice(0,60), difficulty:difficulty, category:category, createdAt:todayKey(), archived:false, completions:{}, freezes:[] });
   ui.showAddHabit=false;
@@ -742,8 +898,10 @@ function toggleHabitDay(habitId,dateKey){
   if(compareKeys(dateKey,todayKey())>0) return;
   if(compareKeys(dateKey,habit.createdAt)<0) return;
   var levelBefore=computeDerived().level;
-  var lucky=false, bonus=0;
+  var lucky=false, bonus=0, coinGot=0;
   if(habit.completions.hasOwnProperty(dateKey)){
+    if(!habit.coins) habit.coins={};
+    revokeCoins(habit.coins[dateKey]||0,dateKey); delete habit.coins[dateKey];
     delete habit.completions[dateKey];
   } else {
     var streak=streakEndingAt(habit,dateKey);
@@ -757,11 +915,15 @@ function toggleHabitDay(habitId,dateKey){
       state.luckyBonusCount=(state.luckyBonusCount||0)+1;
     }
     habit.completions[dateKey]=pts;
+    coinGot=awardCoins(tierInfo(habit.difficulty).coin,dateKey);
+    if(!habit.coins) habit.coins={};
+    habit.coins[dateKey]=coinGot;
   }
   checkAchievements();
   var levelAfter=computeDerived().level;
   if(levelAfter>levelBefore) queueLevelUpToast(levelAfter);
-  else if(lucky) queueToast('\u2728 Lucky bonus! +'+bonus+'p on '+habit.name);
+  else if(lucky) queueToast('\u2728 Lucky bonus! +'+bonus+'p on '+habit.name+(coinGot?' \u00b7 +'+fmtMoney(coinGot):''));
+  else if(coinGot) queueToast('+'+fmtMoney(coinGot));
   persist(); render();
 }
 function useStreakFreeze(habitId){
@@ -795,7 +957,7 @@ function updateHabit(habitId,name,difficulty,category){
   if(!habit) return;
   name=(name||'').trim();
   if(!name) return;
-  if(['easy','medium','hard'].indexOf(difficulty)===-1) difficulty='medium';
+  if(!validTier(difficulty)) difficulty='medium';
   if(CATEGORIES.filter(function(c){return c.id===category;}).length===0) category='other';
   habit.name=name.slice(0,60);
   habit.difficulty=difficulty;
@@ -831,9 +993,11 @@ function toggleTask(taskId){
   if(!task) return;
   var levelBefore=computeDerived().level;
   if(task.done){
+    revokeCoins(task.coinsAwarded||0,task.completedAt); task.coinsAwarded=0;
     task.done=false; task.completedAt=null; task.pointsAwarded=0;
   } else {
     task.done=true; task.completedAt=todayKey(); task.pointsAwarded=task.points;
+    task.coinsAwarded=awardCoins(Math.round(task.points/4),task.completedAt);
   }
   checkAchievements();
   var levelAfter=computeDerived().level;
@@ -977,9 +1141,10 @@ function updateSettings(fields){
   if(fields.weeklyEmergencyMinutes!==undefined) state.pcLedger.weeklyEmergencyMinutes=clampInt(fields.weeklyEmergencyMinutes,0,10080,180);
   if(fields.topupPointCost!==undefined) state.pcLedger.topupPointCost=clampInt(fields.topupPointCost,1,100000,50);
   if(fields.topupMinutes!==undefined) state.pcLedger.topupMinutes=clampInt(fields.topupMinutes,1,1440,15);
-  if(fields.easy!==undefined) state.settings.difficultyPoints.easy=clampInt(fields.easy,1,10000,5);
-  if(fields.medium!==undefined) state.settings.difficultyPoints.medium=clampInt(fields.medium,1,10000,10);
-  if(fields.hard!==undefined) state.settings.difficultyPoints.hard=clampInt(fields.hard,1,10000,20);
+  TIERS.forEach(function(t){ if(fields[t.id]!==undefined) state.settings.difficultyPoints[t.id]=clampInt(fields[t.id],1,10000,t.pts); });
+  if(fields.coinCap!==undefined) state.settings.coinCapCents=Math.round(Math.max(0,parseFloat(fields.coinCap)||0)*100);
+  if(fields.dailyCoinCap!==undefined) state.settings.dailyCoinCapCents=Math.round(Math.max(0,parseFloat(fields.dailyCoinCap)||0)*100);
+  if(state.wallet.cents>state.settings.coinCapCents) state.wallet.cents=state.settings.coinCapCents;
   if(fields.pointsCap!==undefined) state.settings.pointsCap=clampInt(fields.pointsCap,0,10000000,0);
   persist(); render();
   queueToast('Settings saved');
@@ -1021,6 +1186,17 @@ function normalizeState(s){
   if(s.pcLedger.topupMinutes===undefined) s.pcLedger.topupMinutes=15;
   if(s.pcLedger.activeTimer===undefined) s.pcLedger.activeTimer=null;
   if(!s.lastOpenedDate) s.lastOpenedDate=null;
+  TIERS.forEach(function(t){ if(s.settings.difficultyPoints[t.id]===undefined) s.settings.difficultyPoints[t.id]=t.pts; });
+  if(s.settings.coinCapCents===undefined) s.settings.coinCapCents=DEFAULT_COIN_CAP;
+  if(s.settings.dailyCoinCapCents===undefined) s.settings.dailyCoinCapCents=DEFAULT_DAILY_COIN_CAP;
+  if(!s.challenges) s.challenges=DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1] }; });
+  if(!s.challengeLogs) s.challengeLogs=[];
+  if(!s.wheelLog) s.wheelLog=[];
+  if(s.wheel===undefined) s.wheel=null;
+  if(!s.wallet) s.wallet={ cents:0, daily:{}, spent:[] };
+  if(!s.wallet.daily) s.wallet.daily={};
+  if(!s.wallet.spent) s.wallet.spent=[];
+  if(s.wallet.cents>s.settings.coinCapCents) s.wallet.cents=s.settings.coinCapCents;
   s.habits.forEach(function(h){
     if(!h.completions) h.completions={};
     if(!h.freezes) h.freezes=[];
@@ -1047,6 +1223,7 @@ function buildRecap(dateKey){
     if(h.completions.hasOwnProperty(dateKey)){ habitsDone++; points+=h.completions[dateKey]; }
   });
   (state.tasks||[]).forEach(function(t){ if(t.completedAt===dateKey) points+=t.pointsAwarded; });
+  points+=extraPointsOn(dateKey);
   var pcMinutes=0;
   sessionsForDay(dateKey).forEach(function(s){ pcMinutes+=s.minutes; });
   return { dateKey:dateKey, habitsDone:habitsDone, habitsTotal:habitsTotal, points:points, pcMinutes:pcMinutes };
@@ -1089,7 +1266,7 @@ function renderHeader(){
   '<div class="hud">'+
     '<div class="hud-top">'+
       '<span class="wordmark">Ascend</span>'+
-      '<button class="icon-btn" data-action="goto-settings">Settings</button>'+
+      '<button class="icon-btn cog-btn" data-action="goto-settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>'+
     '</div>'+
     '<div class="hud-main">'+
       '<div class="glyph-wrap">'+growthGlyph(d.level)+'</div>'+
@@ -1103,7 +1280,7 @@ function renderHeader(){
       '<div class="hud-stat"><span class="hud-stat-label">Points</span><span class="hud-stat-val c-gold">'+d.points+'</span></div>'+
       '<div class="hud-stat"><span class="hud-stat-label">Current streak</span><span class="hud-stat-val c-sage">'+d.bestStreak+'d</span></div>'+
       '<div class="hud-stat"><span class="hud-stat-label">Best ever</span><span class="hud-stat-val">'+d.bestStreakEver+'d</span></div>'+
-      '<div class="hud-stat"><span class="hud-stat-label">Free time left</span><span class="hud-stat-val c-peri" data-free-remaining>'+formatMinutes(Math.max(0,freeMinutesRemainingToday()))+'</span></div>'+
+      '<div class="hud-stat"><span class="hud-stat-label">Wallet</span><span class="hud-stat-val c-gold">'+fmtMoney(state.wallet.cents)+'</span></div>'+
     '</div>'+
   '</div>';
 }
@@ -1116,9 +1293,7 @@ var TABS=[
   {id:'habits',label:'Habits'},
   {id:'tasks',label:'Tasks'},
   {id:'shop',label:'Shop'},
-  {id:'pctime',label:'PC Time'},
-  {id:'stats',label:'Stats'},
-  {id:'settings',label:'Settings'}
+  {id:'stats',label:'Stats'}
 ];
 function renderTabs(){
   var html='<div class="tabs">';
@@ -1173,21 +1348,70 @@ function renderToday(){
     tasksInner+='</div>';
   }
 
-  var freeRemaining=freeMinutesRemainingToday();
-  var emRemaining=emergencyMinutesRemainingThisWeek();
-  var pcInner='<h2 class="section-title" style="margin-bottom:10px;">PC time today</h2>'+
-    '<div class="row-between" style="margin-bottom:4px;"><span class="muted">Free budget</span><span data-free-remaining>'+formatMinutes(Math.max(0,freeRemaining))+'</span></div>'+
-    meter(state.pcLedger.dailyFreeMinutes+freeTopupMinutesToday()-Math.max(0,freeRemaining),state.pcLedger.dailyFreeMinutes+freeTopupMinutesToday(),'var(--peri)')+
-    '<div style="height:10px;"></div>'+
-    '<div class="row-between" style="margin-bottom:4px;"><span class="muted">Emergency pool (week)</span><span data-emergency-remaining>'+formatMinutes(Math.max(0,emRemaining))+'</span></div>'+
-    meter(state.pcLedger.weeklyEmergencyMinutes-Math.max(0,emRemaining),state.pcLedger.weeklyEmergencyMinutes,'var(--brick)')+
-    renderActiveTimerBlock()+
-    '<div style="margin-top:12px;"><button class="btn btn-block" data-action="set-tab" data-tab="pctime">Open PC time ledger</button></div>';
 
+  html+=renderWheelCard();
   html+=card('Habits',habitsInner);
   html+=card('Tasks',tasksInner);
-  html+=card('Ledger',pcInner);
+  html+=renderChallengesCard(false);
   return html;
+}
+function renderWheelCard(){
+  var w=wheelToday(), inner;
+  if(!w){
+    inner='<h2 class="section-title" style="margin-bottom:0;text-align:center;">Daily wheel</h2>'+
+      '<div class="wheel-wrap">'+wheelSvg()+'</div>'+
+      '<button class="btn btn-primary btn-block" data-action="spin-wheel">Spin (once a day)</button>'+
+      '<div class="faint" style="text-align:center;margin-top:8px;">Spin to get a mission. Do it to claim the bonus prize.</div>';
+  } else if(w.status==='pending'){
+    inner='<h2 class="section-title" style="margin-bottom:6px;">Wheel mission</h2>'+
+      '<div style="font-size:16px;margin-bottom:4px;">'+esc(w.mission)+'</div>'+
+      '<div class="faint c-gold" style="margin-bottom:12px;">Prize: +'+w.points+'p'+(w.coins?' \u00b7 +'+fmtMoney(w.coins):'')+'</div>'+
+      '<button class="btn btn-sage btn-block" data-action="claim-wheel">Done \u2014 claim prize</button>';
+  } else {
+    inner='<h2 class="section-title" style="margin-bottom:6px;">Wheel mission</h2>'+
+      '<div class="muted">\u2713 '+esc(w.mission)+' \u2014 prize claimed. Spin again tomorrow.</div>';
+  }
+  return card('Bonus',inner);
+}
+function renderChallengesCard(full){
+  var inner='<div class="row-between" style="margin-bottom:10px;"><h2 class="section-title" style="margin:0;">Challenges</h2><span class="faint">repeat as often as you like</span></div>';
+  if(!state.challenges.length) inner+='<div class="empty">No challenges yet.</div>';
+  else{
+    inner+='<div class="stack">';
+    state.challenges.forEach(function(c){
+      var n=challengeCountToday(c.id);
+      if(ui.pendingDeleteKind==='challenge' && ui.pendingDeleteId===c.id){
+        inner+='<div class="confirm-inline"><span class="muted">Remove "'+esc(c.name)+'"?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="challenge" data-id="'+c.id+'">Yes</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
+        return;
+      }
+      inner+='<div class="chal-row"><div><div>'+esc(c.name)+'</div><div class="habit-meta">+'+c.points+'p each \u00b7 done today: '+n+'</div></div>'+
+        '<div class="row">'+(n>0?'<button class="btn btn-ghost btn-sm" data-action="undo-challenge" data-id="'+c.id+'">Undo</button>':'')+
+        '<button class="btn btn-sage btn-sm" data-action="log-challenge" data-id="'+c.id+'">+ Done</button>'+
+        (full?'<button class="icon-btn" data-action="ask-delete" data-kind="challenge" data-id="'+c.id+'">Remove</button>':'')+'</div></div>';
+    });
+    inner+='</div>';
+  }
+  if(full){
+    inner+='<div class="divider"></div>';
+    if(ui.showAddChallenge){
+      inner+='<form data-form="add-challenge" class="stack"><div class="field-row"><div class="field" style="flex:2;"><label for="ch-name">Challenge</label><input type="text" id="ch-name" name="name" placeholder="e.g. Take a walk \u2014 1 km" maxlength="60" required></div><div class="field"><label for="ch-pts">Points</label><input type="number" id="ch-pts" name="points" value="5" min="1" max="500"></div></div><div class="row"><button type="submit" class="btn btn-sage">Add</button><button type="button" class="btn btn-ghost" data-action="cancel-add-challenge">Cancel</button></div></form>';
+    } else inner+='<button class="btn btn-sage btn-block" data-action="show-add-challenge">+ Add a challenge</button>';
+  }
+  return card('Repeatable',inner);
+}
+function renderWalletCard(){
+  var w=state.wallet, cap=state.settings.coinCapCents, day=w.daily[todayKey()]||0;
+  var inner='<h2 class="section-title" style="margin-bottom:8px;">Wallet</h2>'+
+    '<div class="row-between" style="margin-bottom:6px;"><span class="hud-stat-val c-gold">'+fmtMoney(w.cents)+'</span><span class="faint">max '+fmtMoney(cap)+'</span></div>'+
+    meter(w.cents,cap,'var(--gold)')+
+    '<div class="faint" style="margin:6px 0 12px;">Earned today '+fmtMoney(day)+' / '+fmtMoney(state.settings.dailyCoinCapCents)+(w.cents>=cap?' \u00b7 wallet full \u2014 spend some!':'')+'</div>'+
+    '<form data-form="spend-coins"><div class="field-row"><div class="field" style="flex:2;"><label for="sp-name">Spent on</label><input type="text" id="sp-name" name="name" placeholder="e.g. chocolate bar" maxlength="60" required></div><div class="field"><label for="sp-amt">Amount ($)</label><input type="number" id="sp-amt" name="amount" step="0.05" min="0.05" value="1.00"></div></div><button type="submit" class="btn btn-peri btn-block">Spend coins</button></form>';
+  if(w.spent.length){
+    inner+='<div class="divider"></div><div class="stack">';
+    w.spent.slice().reverse().slice(0,5).forEach(function(p){ inner+='<div class="row-between"><span class="muted">'+esc(p.name)+'</span><span class="faint">'+formatDateHuman(p.at)+' \u00b7 -'+fmtMoney(p.cents)+'</span></div>'; });
+    inner+='</div>';
+  }
+  return card('Real-world coins',inner);
 }
 function renderActiveTimerBlock(){
   var at=state.pcLedger.activeTimer;
@@ -1221,11 +1445,7 @@ function renderHabits(){
   if(ui.showAddHabit){
     addInner='<form data-form="add-habit" class="stack">'+
       '<div class="field"><label for="hab-name">Habit name</label><input type="text" id="hab-name" name="name" placeholder="e.g. Brush teeth" maxlength="60" autofocus required></div>'+
-      '<div class="field"><label>Difficulty</label><div class="seg">'+
-        '<input type="radio" name="difficulty" id="d-easy" value="easy" checked><label for="d-easy">Easy ('+state.settings.difficultyPoints.easy+'p)</label>'+
-        '<input type="radio" name="difficulty" id="d-medium" value="medium"><label for="d-medium">Medium ('+state.settings.difficultyPoints.medium+'p)</label>'+
-        '<input type="radio" name="difficulty" id="d-hard" value="hard"><label for="d-hard">Hard ('+state.settings.difficultyPoints.hard+'p)</label>'+
-      '</div></div>'+
+      '<div class="field"><label for="hab-tier">Tier</label>'+tierSelectHtml('hab-tier','difficulty','easy')+'</div>'+
       '<div class="field"><label for="hab-category">Category</label>'+categorySelectHtml('hab-category','category','other')+'</div>'+
       '<div class="row"><button type="submit" class="btn btn-sage">Add habit</button><button type="button" class="btn btn-ghost" data-action="cancel-add-habit">Cancel</button></div>'+
     '</form>';
@@ -1277,11 +1497,7 @@ function renderHabitDetail(h){
     return '<div class="edit-panel"><form data-form="edit-habit" class="stack">'+
       '<input type="hidden" name="id" value="'+h.id+'">'+
       '<div class="field"><label for="eh-name-'+h.id+'">Habit name</label><input type="text" id="eh-name-'+h.id+'" name="name" value="'+esc(h.name)+'" maxlength="60" required></div>'+
-      '<div class="field"><label>Difficulty</label><div class="seg">'+
-        '<input type="radio" name="difficulty" id="eh-d-easy-'+h.id+'" value="easy" '+(h.difficulty==='easy'?'checked':'')+'><label for="eh-d-easy-'+h.id+'">Easy ('+state.settings.difficultyPoints.easy+'p)</label>'+
-        '<input type="radio" name="difficulty" id="eh-d-medium-'+h.id+'" value="medium" '+(h.difficulty==='medium'?'checked':'')+'><label for="eh-d-medium-'+h.id+'">Medium ('+state.settings.difficultyPoints.medium+'p)</label>'+
-        '<input type="radio" name="difficulty" id="eh-d-hard-'+h.id+'" value="hard" '+(h.difficulty==='hard'?'checked':'')+'><label for="eh-d-hard-'+h.id+'">Hard ('+state.settings.difficultyPoints.hard+'p)</label>'+
-      '</div></div>'+
+      '<div class="field"><label for="eh-tier-'+h.id+'">Tier</label>'+tierSelectHtml('eh-tier-'+h.id,'difficulty',h.difficulty)+'</div>'+
       '<div class="field"><label for="eh-category-'+h.id+'">Category</label>'+categorySelectHtml('eh-category-'+h.id,'category',h.category||'other')+'</div>'+
       '<div class="row"><button type="submit" class="btn btn-sage">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-habit">Cancel</button></div>'+
     '</form></div>';
@@ -1394,6 +1610,7 @@ function renderTasks(){
     doneInner+='</div>';
     html+=card(null,doneInner);
   }
+  html+=renderChallengesCard(true);
   return html;
 }
 
@@ -1415,6 +1632,7 @@ function renderShop(){
   } else {
     addInner='<button class="btn btn-peri btn-block" data-action="show-add-shop-item">+ Add a shop item</button>';
   }
+  html+=renderWalletCard();
   html+=card('New · '+d.points+' points available',addInner);
 
   var listInner='<h2 class="section-title" style="margin-bottom:10px;">Shop</h2>';
@@ -1547,6 +1765,7 @@ function renderStats(){
     var pts=0;
     (state.habits||[]).forEach(function(h){ if(h.completions.hasOwnProperty(dk)) pts+=h.completions[dk]; });
     (state.tasks||[]).forEach(function(t){ if(t.completedAt===dk) pts+=t.pointsAwarded; });
+    pts+=extraPointsOn(dk);
     if(pts>maxPts) maxPts=pts;
     return pts;
   });
@@ -1574,18 +1793,6 @@ function renderStats(){
     meter(completed,Math.max(1,possible),'var(--sage)');
   html+=card(null,rateInner);
 
-  var wk=weekKeyFor(k);
-  var emSessions=sessionsForWeek(wk).filter(function(s){ return s.type==='emergency'; });
-  var emInner='<h2 class="section-title" style="margin-bottom:10px;">Emergency hours this week</h2>';
-  if(!emSessions.length){ emInner+='<div class="empty">No emergency time used this week.</div>'; }
-  else{
-    emInner+='<div class="stack">';
-    emSessions.forEach(function(s){
-      emInner+='<div><div class="row-between"><span class="c-brick">'+formatMinutes(s.minutes)+'</span><span class="faint">'+formatDateHuman(s.dateKey)+'</span></div>'+(s.reason?'<div class="faint">"'+esc(s.reason)+'"</div>':'')+'</div>';
-    });
-    emInner+='</div>';
-  }
-  html+=card('Pattern review',emInner);
 
   var achvInner='<h2 class="section-title" style="margin-bottom:10px;">Achievements</h2><div class="achv-grid">';
   var unlockedIds=(state.achievements||[]).map(function(a){return a.id;});
@@ -1605,7 +1812,7 @@ function renderStats(){
     '<div class="totals-cell"><div class="totals-val">'+(state.luckyBonusCount||0)+'</div><div class="totals-label">Lucky bonuses hit</div></div>'+
     '<div class="totals-cell"><div class="totals-val">'+d.bestStreakEver+'</div><div class="totals-label">Longest streak ever</div></div>'+
     '<div class="totals-cell"><div class="totals-val">'+unlockedIds.length+' / '+ACHIEVEMENTS.length+'</div><div class="totals-label">Achievements</div></div>'+
-    '<div class="totals-cell"><div class="totals-val">'+d.emergencySessionsLogged+'</div><div class="totals-label">Emergency sessions logged</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+d.challengesDone+'</div><div class="totals-label">Challenges done</div></div>'+
   '</div>';
   html+=card(null,totalsInner);
   return html;
@@ -1617,19 +1824,11 @@ function renderStats(){
 function renderSettings(){
   var html='';
   var formInner='<form data-form="settings" class="stack">'+
-    '<fieldset><legend>Habit point values</legend><div class="field-row">'+
-      '<div class="field"><label for="s-easy">Easy</label><input type="number" id="s-easy" name="easy" value="'+state.settings.difficultyPoints.easy+'" min="1"></div>'+
-      '<div class="field"><label for="s-medium">Medium</label><input type="number" id="s-medium" name="medium" value="'+state.settings.difficultyPoints.medium+'" min="1"></div>'+
-      '<div class="field"><label for="s-hard">Hard</label><input type="number" id="s-hard" name="hard" value="'+state.settings.difficultyPoints.hard+'" min="1"></div>'+
+    tierFieldsHtml()+
+    '<fieldset><legend>Wallet ($)</legend><div class="field-row">'+
+      '<div class="field"><label for="s-ccap">Max balance ($)</label><input type="number" id="s-ccap" name="coinCap" step="0.5" min="0" value="'+(state.settings.coinCapCents/100)+'"></div>'+
+      '<div class="field"><label for="s-dcap">Max earned per day ($)</label><input type="number" id="s-dcap" name="dailyCoinCap" step="0.1" min="0" value="'+(state.settings.dailyCoinCapCents/100)+'"></div>'+
     '</div></fieldset>'+
-    '<fieldset><legend>PC time budgets</legend>'+
-      '<div class="field"><label for="s-daily">Daily free minutes</label><input type="number" id="s-daily" name="dailyFreeMinutes" value="'+state.pcLedger.dailyFreeMinutes+'" min="0"></div>'+
-      '<div class="field"><label for="s-weekly">Weekly emergency minutes</label><input type="number" id="s-weekly" name="weeklyEmergencyMinutes" value="'+state.pcLedger.weeklyEmergencyMinutes+'" min="0"></div>'+
-      '<div class="field-row">'+
-        '<div class="field"><label for="s-topcost">Topup cost (points)</label><input type="number" id="s-topcost" name="topupPointCost" value="'+state.pcLedger.topupPointCost+'" min="1"></div>'+
-        '<div class="field"><label for="s-topmin">Topup grants (minutes)</label><input type="number" id="s-topmin" name="topupMinutes" value="'+state.pcLedger.topupMinutes+'" min="1"></div>'+
-      '</div>'+
-    '</fieldset>'+
     '<fieldset><legend>Points economy</legend>'+
       '<div class="field"><label for="s-cap">Points cap (0 = unlimited, accumulate freely)</label><input type="number" id="s-cap" name="pointsCap" value="'+state.settings.pointsCap+'" min="0"></div>'+
     '</fieldset>'+
@@ -1640,6 +1839,8 @@ function renderSettings(){
   var dataInner='<h2 class="section-title" style="margin-bottom:10px;">Your data</h2>'+
     storageStatusLine()+
     '<p class="muted" style="margin-top:0;font-size:13px;">Export a backup any time, or move it to another device by exporting here and importing there.</p>'+
+    '<div class="row" style="margin-bottom:10px;"><button class="btn" data-action="open-glance">Open glance view</button></div>'+
+    '<p class="faint" style="margin-top:0;">Glance view = compact screen with today\'s stats and to-dos. Add it to your home screen from Chrome (menu → Add to Home screen) while on that view, or long-press the app icon.</p>'+
     '<div class="row"><button class="btn" data-action="export-data">Export JSON backup</button><button class="btn" data-action="trigger-import">Import JSON backup</button></div>'+
     '<input type="file" id="import-file-input" accept="application/json" style="display:none;">';
   html+=card(null,dataInner);
@@ -1665,7 +1866,6 @@ function renderRecapModal(){
     '<h2 class="section-title">Recap · '+formatDateHuman(r.dateKey)+'</h2>'+
     '<div class="recap-stat"><span class="muted">Habits completed</span><span>'+r.habitsDone+' / '+r.habitsTotal+'</span></div>'+
     '<div class="recap-stat"><span class="muted">Points earned</span><span class="c-gold">+'+r.points+'</span></div>'+
-    '<div class="recap-stat"><span class="muted">PC time logged</span><span>'+formatMinutes(r.pcMinutes)+'</span></div>'+
     '<button class="btn btn-primary btn-block" style="margin-top:16px;" data-action="dismiss-recap">Got it</button>'+
   '</div></div>';
 }
@@ -1704,8 +1904,12 @@ function render(){
   appRendered=true;
   var html='';
   html+=renderHeader();
-  html+=renderTabs();
-  html+='<div id="tab-content">'+renderTabContent()+'</div>';
+  if(location.hash==='#glance'){
+    html+='<div id="tab-content">'+renderToday()+'<button class="btn btn-block" data-action="exit-glance">Open full app</button></div>';
+  } else {
+    html+=renderTabs();
+    html+='<div id="tab-content">'+renderTabContent()+'</div>';
+  }
   html+=renderRecapModal();
   html+=renderImportConfirmModal();
   html+=renderToastEl();
@@ -1726,7 +1930,16 @@ function onClick(e){
       ui.pendingDeleteKind=null; ui.pendingDeleteId=null;
       render();
       break;
-    case 'goto-settings': ui.activeTab='settings'; render(); break;
+    case 'spin-wheel': spinWheel(); break;
+    case 'claim-wheel': claimWheel(); break;
+    case 'log-challenge': logChallenge(el.getAttribute('data-id')); break;
+    case 'undo-challenge': undoChallenge(el.getAttribute('data-id')); break;
+    case 'show-add-challenge': ui.showAddChallenge=true; render(); break;
+    case 'cancel-add-challenge': ui.showAddChallenge=false; render(); break;
+    case 'open-glance': location.hash='glance'; break;
+    case 'exit-glance': location.hash=''; ui.activeTab='today'; render(); break;
+    case 'goto-settings': if(location.hash==='#glance') location.hash=''; ui.activeTab='settings'; render(); break;
+    case 'goto-settings-old': ui.activeTab='settings'; render(); break;
     case 'toggle-habit': toggleHabitDay(el.getAttribute('data-habit'),el.getAttribute('data-date')); break;
     case 'expand-habit':
       var hid=el.getAttribute('data-habit');
@@ -1768,6 +1981,7 @@ function onClick(e){
       if(dk==='task') deleteTask(di);
       else if(dk==='shop') deleteShopItem(di);
       else if(dk==='habit') archiveHabit(di);
+      else if(dk==='challenge') deleteChallenge(di);
       break;
     case 'start-timer': startTimer(el.getAttribute('data-type'),null); break;
     case 'stop-timer': stopTimer(); break;
@@ -1802,15 +2016,14 @@ function onSubmit(e){
     case 'edit-task': editTask(fd.get('id'),fd.get('name'),fd.get('points'),fd.get('deadline')); break;
     case 'add-shop-item': addShopItem(fd.get('name'),fd.get('cost')); break;
     case 'edit-shop-item': editShopItem(fd.get('id'),fd.get('name'),fd.get('cost')); break;
+    case 'add-challenge': addChallenge(fd.get('name'),fd.get('points')); break;
+    case 'spend-coins': spendCoins(fd.get('name'),Math.round(parseFloat(fd.get('amount'))*100)); break;
     case 'start-emergency': startTimer('emergency',fd.get('reason')); break;
     case 'manual-log': logManualSession(fd.get('type'),fd.get('minutes'),fd.get('reason')); break;
     case 'settings':
-      updateSettings({
-        easy:fd.get('easy'), medium:fd.get('medium'), hard:fd.get('hard'),
-        dailyFreeMinutes:fd.get('dailyFreeMinutes'), weeklyEmergencyMinutes:fd.get('weeklyEmergencyMinutes'),
-        topupPointCost:fd.get('topupPointCost'), topupMinutes:fd.get('topupMinutes'),
-        pointsCap:fd.get('pointsCap')
-      });
+      var sf={ pointsCap:fd.get('pointsCap'), coinCap:fd.get('coinCap'), dailyCoinCap:fd.get('dailyCoinCap') };
+      TIERS.forEach(function(t){ sf[t.id]=fd.get(t.id); });
+      updateSettings(sf);
       break;
   }
 }
@@ -1845,6 +2058,7 @@ function attachListenersOnce(){
   document.addEventListener('click',onClick);
   document.addEventListener('submit',onSubmit);
   document.addEventListener('change',onChange);
+  window.addEventListener('hashchange',render);
 }
 function finishInit(loaded,warn){
   state=normalizeState(loaded||defaultState());
