@@ -1,5 +1,5 @@
 {
-  "name": "Ascend — Habit Quest",
+  "name": "Ascend \u2014 Habit Quest",
   "short_name": "Ascend",
   "description": "A habit tracker, task list, points economy and PC-time ledger in one idle-game-styled app.",
   "start_url": "./index.html",
@@ -9,7 +9,17 @@
   "background_color": "#12160F",
   "theme_color": "#12160F",
   "shortcuts": [
-    { "name": "At a glance", "short_name": "Glance", "url": "./index.html#glance" }
+    {
+      "name": "Tasks & habits at a glance",
+      "short_name": "Glance",
+      "url": "./index.html#glance",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ],
   "icons": [
     {

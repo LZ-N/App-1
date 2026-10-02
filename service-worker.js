@@ -9,7 +9,7 @@
   files, and swap them in — no reinstall, no app store, nothing
   for you to do on the tablet except relaunch the app once.
 */
-var CACHE_VERSION = 'ascend-v2';
+var CACHE_VERSION = 'ascend-v6';
 var APP_SHELL = [
   './index.html',
   './manifest.json',

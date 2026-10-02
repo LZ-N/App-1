@@ -275,6 +275,38 @@
   .wheel-wrap::before{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top:14px solid var(--text);z-index:2;}
   .wheel-wrap svg{width:100%;display:block;}
   .chal-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+
+  /* ===== v3 polish ===== */
+  html{-webkit-tap-highlight-color:transparent;}
+  button,.cal-cell,.seg label{touch-action:manipulation;}
+  #app{max-width:760px;padding-top:max(20px,env(safe-area-inset-top));padding-bottom:calc(90px + env(safe-area-inset-bottom));}
+  .tabs{position:sticky;top:0;z-index:20;background:var(--bg);padding-top:4px;margin-left:-4px;margin-right:-4px;padding-left:4px;padding-right:4px;}
+  .tab-btn{padding:12px 13px;}
+  .btn{min-height:38px;}
+  .btn:active,.icon-btn:active,.check-circle:active{transform:scale(.96);}
+  .btn-sm{min-height:30px;}
+  .check-circle{width:36px;height:36px;}
+  .check-circle svg{width:17px;height:17px;}
+  .check-circle.rest{border-color:var(--peri);color:var(--peri);}
+  .check-circle.rest svg{display:none;}
+  .check-circle.rest::after{content:'z';font-family:var(--font-display);font-style:italic;font-size:15px;}
+  .check-circle.pop{animation:pop .3s ease-out;}
+  @keyframes pop{0%{transform:scale(.8);}60%{transform:scale(1.2);}100%{transform:scale(1);}}
+  .fade{animation:fade-in .22s ease;}
+  @keyframes fade-in{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .card{box-shadow:0 1px 0 rgba(255,255,255,.025) inset,0 6px 18px rgba(0,0,0,.18);}
+  .coin{display:inline-block;width:.85em;height:.85em;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--gold-soft),var(--gold) 70%);box-shadow:0 0 0 1.5px rgba(0,0,0,.25) inset;margin-right:5px;vertical-align:-1px;}
+  .chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--border);color:var(--text-muted);}
+  .chip-gold{color:var(--gold-soft);border-color:rgba(201,162,39,.45);}
+  .chip-peri{color:var(--peri-soft);border-color:rgba(142,151,201,.45);}
+  .day-meter{margin:-2px 0 14px;}
+  .overdue{color:var(--brick-soft);}
+  .hud-stats{justify-content:space-between;}
+  .link-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .spend-row{display:flex;gap:10px;align-items:flex-end;}
+  .spend-row .field{flex:1;margin-bottom:0;}
+  .big-num{font-family:var(--font-display);font-size:34px;line-height:1.1;font-variant-numeric:tabular-nums;}
+  .chal-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -297,7 +329,8 @@ var TIERS = [
   { id:'epic', label:'Epic', pts:50, coin:25 }
 ];
 var DIFFICULTY_POINTS = {}; TIERS.forEach(function(t){ DIFFICULTY_POINTS[t.id]=t.pts; });
-var DEFAULT_COIN_CAP = 1000, DEFAULT_DAILY_COIN_CAP = 100; /* cents */
+var DEFAULT_COIN_CAP = 10000, DEFAULT_DAILY_COIN_CAP = 0; /* cents; daily cap removed (0 = none) */
+var BOOST_STREAK_DAYS = 14, BOOST_PER_BLOCK = 1, DEFAULT_BOOST_CAP = 100; /* +1% coins per 14-day streak block, per habit, max +100% */
 var WHEEL_MISSIONS = [
   ['Stretch for 20 minutes',20,5],['Read 1 chapter of a book',20,5],['Go for a run or jog',30,10],
   ['Take a 30-minute walk',25,5],['Do 20 push-ups (any sets)',20,5],['Tidy your desk or room for 10 minutes',15,0],
@@ -319,23 +352,55 @@ var LUCKY_CHANCE = 0.12;
 var LUCKY_BONUS_FRACTION = 0.4;
 
 var ACHIEVEMENTS = [
+  /* habits */
   { id:'first_step', name:'First Step', desc:'Complete your first habit', check:function(s,d){ return d.totalCompletions>=1; } },
-  { id:'getting_started', name:'Getting Started', desc:'10 total habit check-ins', check:function(s,d){ return d.totalCompletions>=10; } },
-  { id:'century', name:'Century Club', desc:'100 total habit check-ins', check:function(s,d){ return d.totalCompletions>=100; } },
+  { id:'getting_started', name:'Getting Started', desc:'10 habit check-ins', check:function(s,d){ return d.totalCompletions>=10; } },
+  { id:'fifty', name:'Fifty Strong', desc:'50 habit check-ins', check:function(s,d){ return d.totalCompletions>=50; } },
+  { id:'century', name:'Century Club', desc:'100 habit check-ins', check:function(s,d){ return d.totalCompletions>=100; } },
+  { id:'five_hundred', name:'Five Hundred', desc:'500 habit check-ins', check:function(s,d){ return d.totalCompletions>=500; } },
+  { id:'thousand', name:'Thousand Steps', desc:'1,000 habit check-ins', check:function(s,d){ return d.totalCompletions>=1000; } },
+  { id:'perfect_day', name:'Perfect Day', desc:'Finish every habit in one day (3+ habits)', check:function(s,d){ return perfectDayToday(); } },
+  { id:'deep_breath', name:'Deep Breath', desc:'Use a rest day', check:function(s,d){ return d.restDays>=1; } },
+  /* streaks */
   { id:'week_strong', name:'One Week Strong', desc:'7-day streak on any habit', check:function(s,d){ return d.bestStreak>=7; } },
   { id:'fortnight', name:'Two Week Warrior', desc:'14-day streak on any habit', check:function(s,d){ return d.bestStreak>=14; } },
   { id:'unstoppable', name:'Unstoppable', desc:'30-day streak on any habit', check:function(s,d){ return d.bestStreak>=30; } },
+  { id:'sixty', name:'Two Months Deep', desc:'60-day streak on any habit', check:function(s,d){ return d.bestStreak>=60; } },
+  { id:'hundred_days', name:'Hundred Days', desc:'100-day streak on any habit', check:function(s,d){ return d.bestStreak>=100; } },
+  { id:'full_orbit', name:'Full Orbit', desc:'365-day streak on any habit', check:function(s,d){ return d.bestStreak>=365; } },
+  /* levels */
   { id:'level5', name:'Level 5', desc:'Reach level 5', check:function(s,d){ return d.level>=5; } },
   { id:'level10', name:'Level 10', desc:'Reach level 10', check:function(s,d){ return d.level>=10; } },
   { id:'level20', name:'Level 20', desc:'Reach level 20', check:function(s,d){ return d.level>=20; } },
-  { id:'task_master', name:'Task Master', desc:'Complete 25 one-off tasks', check:function(s,d){ return d.tasksCompleted>=25; } },
-  { id:'big_spender', name:'Big Spender', desc:'Make your first shop purchase', check:function(s,d){ return s.purchases.length>=1; } },
-  { id:'challenger', name:'Challenger', desc:'Log 25 challenges', check:function(s,d){ return d.challengesDone>=25; } },
+  { id:'level30', name:'Level 30', desc:'Reach level 30', check:function(s,d){ return d.level>=30; } },
+  { id:'specialist', name:'Specialist', desc:'Reach level 5 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=5; }); } },
+  { id:'master_one', name:'Master of One', desc:'Reach level 10 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=10; }); } },
+  { id:'well_rounded', name:'Well Rounded', desc:'Reach level 3 in every category', check:function(s,d){ return categoryDerived().every(function(c){ return c.level>=3; }); } },
+  /* tasks */
+  { id:'off_the_list', name:'Off the List', desc:'Complete your first task', check:function(s,d){ return d.tasksCompleted>=1; } },
+  { id:'task_master', name:'Task Master', desc:'Complete 25 tasks', check:function(s,d){ return d.tasksCompleted>=25; } },
+  { id:'task_machine', name:'Task Machine', desc:'Complete 100 tasks', check:function(s,d){ return d.tasksCompleted>=100; } },
+  /* challenges & wheel */
+  { id:'warm_up', name:'Warm-up', desc:'Finish your first challenge', check:function(s,d){ return d.challengesDone>=1; } },
+  { id:'challenger', name:'Challenger', desc:'Finish 25 challenges', check:function(s,d){ return d.challengesDone>=25; } },
+  { id:'challenge_addict', name:'Challenge Addict', desc:'Finish 100 challenges', check:function(s,d){ return d.challengesDone>=100; } },
+  { id:'first_spin', name:'First Spin', desc:'Claim your first wheel prize', check:function(s,d){ return d.wheelsDone>=1; } },
   { id:'wheel_regular', name:'Wheel Regular', desc:'Claim 7 wheel prizes', check:function(s,d){ return d.wheelsDone>=7; } },
+  { id:'wheel_veteran', name:'Wheel Veteran', desc:'Claim 30 wheel prizes', check:function(s,d){ return d.wheelsDone>=30; } },
+  /* luck */
   { id:'lucky_break', name:'Lucky Break', desc:'Hit your first lucky bonus', check:function(s,d){ return (s.luckyBonusCount||0)>=1; } },
   { id:'four_leaf', name:'Four-Leaf Clover', desc:'Hit 10 lucky bonuses', check:function(s,d){ return (s.luckyBonusCount||0)>=10; } },
-  { id:'specialist', name:'Specialist', desc:'Reach level 5 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=5; }); } },
-  { id:'well_rounded', name:'Well Rounded', desc:'Reach level 3 in every category', check:function(s,d){ return categoryDerived().every(function(c){ return c.level>=3; }); } }
+  { id:'jackpot', name:'Jackpot Season', desc:'Hit 50 lucky bonuses', check:function(s,d){ return (s.luckyBonusCount||0)>=50; } },
+  /* coins */
+  { id:'piggy_bank', name:'Piggy Bank', desc:'Hold $10 in your wallet', check:function(s,d){ return s.wallet.cents>=1000; } },
+  { id:'stash', name:'Stash', desc:'Hold $50 in your wallet', check:function(s,d){ return s.wallet.cents>=5000; } },
+  { id:'vault', name:'Full Vault', desc:'Fill your wallet to its max', check:function(s,d){ return s.settings.coinCapCents>0 && s.wallet.cents>=s.settings.coinCapCents-0.5; } },
+  { id:'treat_yourself', name:'Treat Yourself', desc:'Spend coins for the first time', check:function(s,d){ return (s.wallet.spent||[]).length>=1; } },
+  /* boost */
+  { id:'boost_5', name:'Warming Up', desc:'Reach a +5% coin boost', check:function(s,d){ return boostPercent()>=5; } },
+  { id:'boost_25', name:'On a Roll', desc:'Reach a +25% coin boost', check:function(s,d){ return boostPercent()>=25; } },
+  { id:'boost_50', name:'Compounding', desc:'Reach a +50% coin boost', check:function(s,d){ return boostPercent()>=50; } },
+  { id:'boost_max', name:'Maxed Out', desc:'Hit your maximum coin boost', check:function(s,d){ var c=(s.settings.boostCap===undefined?DEFAULT_BOOST_CAP:s.settings.boostCap); return c>0 && boostPercent()>=c; } }
 ];
 
 /* =====================================================================
@@ -350,6 +415,16 @@ var ui = {
   showAddTask:false,
   showAddShopItem:false,
   showAddChallenge:false,
+  editingChallengeId:null,
+  settingsUnlocked:false,
+  pendingPromptDismissed:false,
+  cooldownUntil:0,
+  lockoutUntil:0,
+  pinFails:0,
+  taps:[],
+  gateError:null,
+  pop:null,
+  fade:false,
   spinning:false,
   spinAngle:0,
   showEmergencyStartForm:false,
@@ -417,7 +492,7 @@ function defaultState(){
     ],
     purchases:[],
     topups:[],
-    challenges:DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1] }; }),
+    challenges:DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1], limit:0 }; }),
     challengeLogs:[],
     wheel:null,
     wheelLog:[],
@@ -436,7 +511,10 @@ function defaultState(){
       difficultyPoints:DIFFICULTY_POINTS_COPY(),
       pointsCap:0,
       coinCapCents:DEFAULT_COIN_CAP,
-      dailyCoinCapCents:DEFAULT_DAILY_COIN_CAP
+      dailyCoinCapCents:DEFAULT_DAILY_COIN_CAP,
+      boostCap:DEFAULT_BOOST_CAP,
+      tierCoins:{},
+      v3:true
     }
   };
 }
@@ -560,8 +638,20 @@ function levelTierName(level){
 /* =====================================================================
    STREAKS
    ===================================================================== */
-function freezesUsedInMonth(habit, monthKey){
-  return (habit.freezes||[]).filter(function(k){ return monthKeyOf(k)===monthKey; }).length;
+function restUsedInWeek(habit, key){
+  var wk=weekKeyFor(key);
+  return (habit.freezes||[]).filter(function(k){ return weekKeyFor(k)===wk; }).length;
+}
+function canRest(habit, key){
+  if(compareKeys(key,habit.createdAt)<0) return false;
+  if(compareKeys(key,todayKey())>0) return false;
+  if(isCoveredDay(habit,key)) return false;
+  return restUsedInWeek(habit,key)<1;
+}
+function perfectDayToday(){
+  var t=todayKey();
+  var act=(state.habits||[]).filter(function(h){ return !h.archived && compareKeys(h.createdAt,t)<=0; });
+  return act.length>=3 && act.every(function(h){ return h.completions.hasOwnProperty(t); });
 }
 function isCoveredDay(habit, key){
   return habit.completions.hasOwnProperty(key) || (habit.freezes||[]).indexOf(key)!==-1;
@@ -587,6 +677,15 @@ function streakMultiplier(streak){
   if(streak>=7) return 1.2;
   if(streak>=3) return 1.1;
   return 1.0;
+}
+function boostPercent(){
+  var sum=0;
+  (state.habits||[]).forEach(function(h){
+    if(h.archived) return;
+    sum+=Math.floor(currentStreak(h)/BOOST_STREAK_DAYS)*BOOST_PER_BLOCK;
+  });
+  var cap=(state.settings && state.settings.boostCap!==undefined)?state.settings.boostCap:DEFAULT_BOOST_CAP;
+  return Math.max(0,Math.min(cap,sum));
 }
 function bestStreakAcrossHabits(){
   var best=0;
@@ -643,6 +742,7 @@ function computeDerived(){
     tasksCompleted:tasksCompleted,
     emergencySessionsLogged:emergencySessionsLogged,
     challengesDone:(state.challengeLogs||[]).length,
+    restDays:(state.habits||[]).reduce(function(n,h){ return n+(h.freezes||[]).length; },0),
     wheelsDone:(state.wheelLog||[]).length,
     bestStreak:bestStreakAcrossHabits(),
     bestStreakEver:longestStreakEverAcrossHabits(),
@@ -749,40 +849,60 @@ function validTier(d){ return TIERS.some(function(t){ return t.id===d; }); }
 function tierInfo(id){ return TIERS.filter(function(t){ return t.id===id; })[0]||TIERS[2]; }
 function tierSelectHtml(id,name,sel){
   var h='<select id="'+id+'" name="'+name+'">';
-  TIERS.forEach(function(t){ h+='<option value="'+t.id+'" '+(t.id===sel?'selected':'')+'>'+t.label+' ('+((state.settings.difficultyPoints&&state.settings.difficultyPoints[t.id])||t.pts)+'p)</option>'; });
+  TIERS.forEach(function(t){ h+='<option value="'+t.id+'" '+(t.id===sel?'selected':'')+'>'+t.label+' \u00b7 '+((state.settings.difficultyPoints&&state.settings.difficultyPoints[t.id])||t.pts)+' xp</option>'; });
   return h+'</select>';
 }
+function coinTierFieldsHtml(){
+  var h='<fieldset><legend>Coins per check-in (cents)</legend><div class="field-row" style="flex-wrap:wrap;">';
+  TIERS.forEach(function(t){ h+='<div class="field" style="flex:1 1 30%;"><label for="sc-'+t.id+'">'+t.label+'</label><input type="number" id="sc-'+t.id+'" name="coin_'+t.id+'" value="'+tierCoin(t.id)+'" min="0" step="0.5"></div>'; });
+  return h+'</div></fieldset>';
+}
 function tierFieldsHtml(){
-  var h='<fieldset><legend>Habit point values</legend><div class="field-row" style="flex-wrap:wrap;">';
+  var h='<fieldset><legend>XP per tier</legend><div class="field-row" style="flex-wrap:wrap;">';
   TIERS.forEach(function(t){ h+='<div class="field" style="flex:1 1 30%;"><label for="s-'+t.id+'">'+t.label+'</label><input type="number" id="s-'+t.id+'" name="'+t.id+'" value="'+state.settings.difficultyPoints[t.id]+'" min="1"></div>'; });
   return h+'</div></fieldset>';
 }
 
 /* ---- coins (cents internally, shown as $) ---- */
 function fmtMoney(c){ return '$'+(c/100).toFixed(2); }
+function r2(x){ return Math.round(x*100)/100; }
 function coinRoom(dateKey){
-  var w=state.wallet;
-  return Math.max(0,Math.min(state.settings.coinCapCents-w.cents, state.settings.dailyCoinCapCents-(w.daily[dateKey]||0)));
+  return Math.max(0,state.settings.coinCapCents-state.wallet.cents);
+}
+function tierCoin(id){
+  var tc=state.settings.tierCoins;
+  return (tc && tc[id]!==undefined)?tc[id]:tierInfo(id).coin;
 }
 function awardCoins(cents,dateKey){
   if(cents<=0 || dateKey!==todayKey()) return 0;
-  var a=Math.min(cents,coinRoom(dateKey));
+  var a=Math.min(r2(cents*(1+boostPercent()/100)),coinRoom(dateKey));
   if(a<=0) return 0;
-  var w=state.wallet; w.cents+=a; w.daily[dateKey]=(w.daily[dateKey]||0)+a;
+  var w=state.wallet; w.cents=r2(w.cents+a); w.daily[dateKey]=r2((w.daily[dateKey]||0)+a);
   return a;
 }
 function revokeCoins(a,dateKey){
   if(!a) return;
-  var w=state.wallet; w.cents=Math.max(0,w.cents-a); w.daily[dateKey]=Math.max(0,(w.daily[dateKey]||0)-a);
+  var w=state.wallet; w.cents=Math.max(0,r2(w.cents-a)); w.daily[dateKey]=Math.max(0,r2((w.daily[dateKey]||0)-a));
 }
-function spendCoins(name,cents){
-  name=(name||'').trim();
-  if(!name || !(cents>0) || cents>state.wallet.cents) { queueToast('Not enough coins for that'); render(); return; }
-  state.wallet.cents-=cents;
-  state.wallet.spent.push({ id:uid(), name:name.slice(0,60), cents:cents, at:todayKey() });
+function spendCoins(cents){
+  if(!(cents>0) || cents>state.wallet.cents+0.001){ queueToast('Not enough coins for that'); render(); return; }
+  state.wallet.cents=Math.max(0,r2(state.wallet.cents-cents));
+  state.wallet.spent.push({ id:uid(), name:'', cents:cents, at:todayKey() });
+  checkAchievements();
   persist(); render();
-  queueToast('Spent '+fmtMoney(cents)+' on '+name);
+  queueToast('Spent '+fmtMoney(cents));
 }
+function undoSpend(id){
+  var list=state.wallet.spent;
+  for(var i=0;i<list.length;i++){
+    if(list[i].id===id){
+      state.wallet.cents=Math.min(state.settings.coinCapCents,r2(state.wallet.cents+list[i].cents));
+      list.splice(i,1); break;
+    }
+  }
+  persist(); render();
+}
+function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||15); }catch(e){} }
 function extraPointsOn(dk){
   var p=0;
   (state.challengeLogs||[]).forEach(function(l){ if(l.dateKey===dk) p+=l.points||0; });
@@ -791,24 +911,42 @@ function extraPointsOn(dk){
 }
 
 /* ---- repeatable challenges ---- */
-function addChallenge(name,points){
+function addChallenge(name,points,limit){
   name=(name||'').trim(); if(!name) return;
-  state.challenges.push({ id:uid(), name:name.slice(0,60), points:clampInt(points,1,500,5) });
+  state.challenges.push({ id:uid(), name:name.slice(0,60), points:clampInt(points,1,500,5), limit:clampInt(limit,0,99,0) });
   ui.showAddChallenge=false; persist(); render();
+}
+function editChallenge(id,name,points,limit){
+  var c=state.challenges.filter(function(x){ return x.id===id; })[0];
+  name=(name||'').trim();
+  if(!c || !name) return;
+  c.name=name.slice(0,60); c.points=clampInt(points,1,500,c.points); c.limit=clampInt(limit,0,99,0);
+  ui.editingChallengeId=null; persist(); render();
+}
+function moveChallenge(id,dir){
+  var list=state.challenges, idx=list.findIndex(function(c){ return c.id===id; }), j=idx+dir;
+  if(idx<0||j<0||j>=list.length) return;
+  var tmp=list[idx]; list[idx]=list[j]; list[j]=tmp;
+  persist(); render();
 }
 function challengeCountToday(id){
   var t=todayKey();
   return state.challengeLogs.filter(function(l){ return l.challengeId===id && l.dateKey===t; }).length;
 }
+function challengeCountTotal(id){
+  return state.challengeLogs.filter(function(l){ return l.challengeId===id; }).length;
+}
 function logChallenge(id){
   var c=state.challenges.filter(function(x){ return x.id===id; })[0];
   if(!c) return;
+  if(c.limit>0 && challengeCountToday(id)>=c.limit){ queueToast('Daily limit reached for this challenge'); render(); return; }
   var lb=computeDerived().level, t=todayKey();
   var coins=awardCoins(Math.round(c.points/4),t);
   state.challengeLogs.push({ id:uid(), challengeId:id, name:c.name, points:c.points, coins:coins, dateKey:t });
   checkAchievements();
   var la=computeDerived().level;
-  if(la>lb) queueLevelUpToast(la); else queueToast('+'+c.points+'p'+(coins?' \u00b7 +'+fmtMoney(coins):''));
+  buzz(15);
+  if(la>lb) queueLevelUpToast(la); else queueToast('+'+c.points+' xp'+(coins?' \u00b7 +'+fmtMoney(coins):''));
   persist(); render();
 }
 function undoChallenge(id){
@@ -848,7 +986,7 @@ function claimWheel(){
   state.wheelLog.push({ id:uid(), dateKey:todayKey(), name:w.mission, points:w.points, coins:coins });
   checkAchievements();
   var la=computeDerived().level;
-  if(la>lb) queueLevelUpToast(la); else queueToast('Wheel prize! +'+w.points+'p'+(coins?' \u00b7 +'+fmtMoney(coins):''));
+  if(la>lb) queueLevelUpToast(la); else queueToast('Wheel prize! +'+w.points+' xp'+(coins?' \u00b7 +'+fmtMoney(coins):''));
   persist(); render();
 }
 function wheelSvg(){
@@ -915,31 +1053,36 @@ function toggleHabitDay(habitId,dateKey){
       state.luckyBonusCount=(state.luckyBonusCount||0)+1;
     }
     habit.completions[dateKey]=pts;
-    coinGot=awardCoins(tierInfo(habit.difficulty).coin,dateKey);
+    coinGot=awardCoins(tierCoin(habit.difficulty),dateKey);
+    ui.pop=habit.id+'|'+dateKey; buzz(18);
     if(!habit.coins) habit.coins={};
     habit.coins[dateKey]=coinGot;
   }
   checkAchievements();
   var levelAfter=computeDerived().level;
   if(levelAfter>levelBefore) queueLevelUpToast(levelAfter);
-  else if(lucky) queueToast('\u2728 Lucky bonus! +'+bonus+'p on '+habit.name+(coinGot?' \u00b7 +'+fmtMoney(coinGot):''));
+  else if(lucky) queueToast('\u2728 Lucky bonus! +'+bonus+' xp on '+habit.name+(coinGot?' \u00b7 +'+fmtMoney(coinGot):''));
   else if(coinGot) queueToast('+'+fmtMoney(coinGot));
   persist(); render();
 }
-function useStreakFreeze(habitId){
+function useRestDay(habitId,offset){
   var habit=findHabit(habitId);
   if(!habit) return;
-  var mk=todayMonthKey();
-  if(freezesUsedInMonth(habit,mk)>=2) return;
-  var key=addDaysKey(todayKey(),-1), guard=0;
-  while(guard<60 && compareKeys(key,habit.createdAt)>=0){
-    if(!isCoveredDay(habit,key)){
-      habit.freezes.push(key);
-      persist(); render();
-      return;
-    }
-    key=addDaysKey(key,-1); guard++;
-  }
+  var key=addDaysKey(todayKey(),offset||0);
+  if(!canRest(habit,key)) return;
+  habit.freezes.push(key);
+  checkAchievements();
+  persist(); render();
+  queueToast('Rest day logged \u2014 your streak is safe');
+}
+function cancelRestDay(habitId){
+  var habit=findHabit(habitId);
+  if(!habit) return;
+  var wk=weekKeyFor(todayKey());
+  var mine=(habit.freezes||[]).filter(function(k){ return weekKeyFor(k)===wk; }).sort(compareKeys);
+  if(!mine.length) return;
+  habit.freezes=habit.freezes.filter(function(k){ return k!==mine[mine.length-1]; });
+  persist(); render();
 }
 function archiveHabit(habitId){
   var habit=findHabit(habitId);
@@ -998,6 +1141,7 @@ function toggleTask(taskId){
   } else {
     task.done=true; task.completedAt=todayKey(); task.pointsAwarded=task.points;
     task.coinsAwarded=awardCoins(Math.round(task.points/4),task.completedAt);
+    ui.pop='t|'+task.id; buzz(18);
   }
   checkAchievements();
   var levelAfter=computeDerived().level;
@@ -1136,18 +1280,119 @@ function renderTimerDisplays(){
 /* =====================================================================
    ACTIONS — SETTINGS / DATA
    ===================================================================== */
-function updateSettings(fields){
+function applySettingsFields(fields){
   if(fields.dailyFreeMinutes!==undefined) state.pcLedger.dailyFreeMinutes=clampInt(fields.dailyFreeMinutes,0,1440,120);
   if(fields.weeklyEmergencyMinutes!==undefined) state.pcLedger.weeklyEmergencyMinutes=clampInt(fields.weeklyEmergencyMinutes,0,10080,180);
   if(fields.topupPointCost!==undefined) state.pcLedger.topupPointCost=clampInt(fields.topupPointCost,1,100000,50);
   if(fields.topupMinutes!==undefined) state.pcLedger.topupMinutes=clampInt(fields.topupMinutes,1,1440,15);
   TIERS.forEach(function(t){ if(fields[t.id]!==undefined) state.settings.difficultyPoints[t.id]=clampInt(fields[t.id],1,10000,t.pts); });
   if(fields.coinCap!==undefined) state.settings.coinCapCents=Math.round(Math.max(0,parseFloat(fields.coinCap)||0)*100);
-  if(fields.dailyCoinCap!==undefined) state.settings.dailyCoinCapCents=Math.round(Math.max(0,parseFloat(fields.dailyCoinCap)||0)*100);
+  if(fields.boostCap!==undefined) state.settings.boostCap=clampInt(fields.boostCap,0,1000,DEFAULT_BOOST_CAP);
+  TIERS.forEach(function(t){
+    var k='coin_'+t.id;
+    if(fields[k]!==undefined){ var v=parseFloat(fields[k]); state.settings.tierCoins[t.id]=isNaN(v)?t.coin:Math.max(0,r2(v)); }
+  });
   if(state.wallet.cents>state.settings.coinCapCents) state.wallet.cents=state.settings.coinCapCents;
-  if(fields.pointsCap!==undefined) state.settings.pointsCap=clampInt(fields.pointsCap,0,10000000,0);
   persist(); render();
-  queueToast('Settings saved');
+}
+/* ---- delayed settings: changes wait 24h, then need an explicit confirm ---- */
+var SETTINGS_DELAY_MS=24*60*60*1000;
+function sanitizeSettingFields(f){
+  var o={};
+  TIERS.forEach(function(t){
+    if(f[t.id]!==undefined) o[t.id]=clampInt(f[t.id],1,10000,state.settings.difficultyPoints[t.id]);
+    var k='coin_'+t.id;
+    if(f[k]!==undefined){ var v=parseFloat(f[k]); o[k]=isNaN(v)?tierCoin(t.id):Math.max(0,r2(v)); }
+  });
+  if(f.coinCap!==undefined) o.coinCap=Math.max(0,r2(parseFloat(f.coinCap)||0));
+  if(f.boostCap!==undefined) o.boostCap=clampInt(f.boostCap,0,1000,state.settings.boostCap);
+  return o;
+}
+function currentSettingValue(k){
+  if(k==='coinCap') return r2(state.settings.coinCapCents/100);
+  if(k==='boostCap') return state.settings.boostCap;
+  if(k.indexOf('coin_')===0) return tierCoin(k.slice(5));
+  return state.settings.difficultyPoints[k];
+}
+function settingLabel(k){
+  if(k==='coinCap') return 'Max coin balance ($)';
+  if(k==='boostCap') return 'Max streak boost (%)';
+  if(k.indexOf('coin_')===0) return tierInfo(k.slice(5)).label+' coins per check-in (cents)';
+  return tierInfo(k).label+' XP';
+}
+function settingChanges(fields){
+  var out=[];
+  Object.keys(fields).forEach(function(k){
+    var cur=currentSettingValue(k);
+    if(cur!==fields[k]) out.push({ key:k, label:settingLabel(k), from:cur, to:fields[k] });
+  });
+  return out;
+}
+function updateSettings(fields){
+  var clean=sanitizeSettingFields(fields);
+  var tighten={}, loosen={}, nT=0, nL=0;
+  settingChanges(clean).forEach(function(c){
+    /* lower = tighter (less XP, fewer coins, smaller caps); higher = looser */
+    if(c.to<c.from){ tighten[c.key]=c.to; nT++; } else { loosen[c.key]=c.to; nL++; }
+  });
+  if(!nT && !nL){ persist(); render(); queueToast('No changes to save'); return; }
+  if(nT){
+    applySettingsFields(tighten);
+    if(state.settings.pending){
+      Object.keys(tighten).forEach(function(k){ delete state.settings.pending.fields[k]; });
+      if(!Object.keys(state.settings.pending.fields).length) state.settings.pending=null;
+    }
+  }
+  if(nL){
+    var merged={}, old=state.settings.pending;
+    if(old) Object.keys(old.fields).forEach(function(k){ merged[k]=old.fields[k]; });
+    Object.keys(loosen).forEach(function(k){ merged[k]=loosen[k]; });
+    state.settings.pending={ fields:merged, requestedAt:Date.now(), applyAt:Date.now()+SETTINGS_DELAY_MS };
+    ui.pendingPromptDismissed=false;
+  }
+  persist(); render();
+  if(nT && nL) queueToast('Lower values applied now \u2014 increases wait 24 hours');
+  else if(nT) queueToast('Applied \u2014 tighter limits take effect right away');
+  else queueToast('Scheduled \u2014 increases can be applied in 24 hours');
+}
+function pendingDue(){ var p=state.settings.pending; return !!(p && Date.now()>=p.applyAt); }
+function applyPending(){
+  var p=state.settings.pending; if(!p) return;
+  applySettingsFields(p.fields);
+  state.settings.pending=null;
+  ui.pendingPromptDismissed=false;
+  persist(); render();
+  queueToast('Changes applied');
+}
+function discardPending(){
+  state.settings.pending=null; ui.pendingPromptDismissed=false;
+  persist(); render();
+  queueToast('Pending changes discarded');
+}
+function fmtVal(k,v){ return k==='coinCap'?'$'+v : (k==='boostCap'?v+'%' : String(v)); }
+function pendingListHtml(p){
+  var h='<div class="stack" style="margin:10px 0;">';
+  settingChanges(p.fields).forEach(function(c){
+    h+='<div class="row-between"><span class="muted">'+esc(c.label)+'</span><span><span class="faint">'+esc(fmtVal(c.key,c.from))+'</span> \u2192 <strong class="c-gold">'+esc(fmtVal(c.key,c.to))+'</strong></span></div>';
+  });
+  // changes that already equal the live value aren't shown
+  return h+'</div>';
+}
+function hoursLeftText(ms){
+  var m=Math.max(0,Math.ceil(ms/60000)), h=Math.floor(m/60);
+  return h>0?h+'h '+(m%60)+'m':m+'m';
+}
+function renderPendingModal(){
+  var p=state.settings.pending;
+  if(!p || !pendingDue() || ui.pendingPromptDismissed) return '';
+  if(!settingChanges(p.fields).length){ state.settings.pending=null; persist(); return ''; }
+  return '<div class="overlay"><div class="modal">'+
+    '<h2 class="section-title">Apply your settings changes?</h2>'+
+    '<p class="muted" style="font-size:13.5px;margin:0;">You asked for these increases 24 hours ago. Still want them?</p>'+
+    pendingListHtml(p)+
+    '<div class="row" style="flex-wrap:wrap;"><button class="btn btn-primary" data-action="apply-pending">Yes, apply now</button><button class="btn btn-ghost" data-action="discard-pending">No, discard</button></div>'+
+    '<button class="btn btn-ghost btn-sm" style="margin-top:10px;" data-action="later-pending">Ask me later</button>'+
+  '</div></div>';
 }
 function exportData(){
   try{
@@ -1189,7 +1434,17 @@ function normalizeState(s){
   TIERS.forEach(function(t){ if(s.settings.difficultyPoints[t.id]===undefined) s.settings.difficultyPoints[t.id]=t.pts; });
   if(s.settings.coinCapCents===undefined) s.settings.coinCapCents=DEFAULT_COIN_CAP;
   if(s.settings.dailyCoinCapCents===undefined) s.settings.dailyCoinCapCents=DEFAULT_DAILY_COIN_CAP;
-  if(!s.challenges) s.challenges=DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1] }; });
+  if(!s.settings.v3){
+    s.settings.v3=true;
+    if(s.settings.coinCapCents<DEFAULT_COIN_CAP) s.settings.coinCapCents=DEFAULT_COIN_CAP;
+    s.settings.dailyCoinCapCents=0;
+  }
+  if(s.settings.boostCap===undefined) s.settings.boostCap=DEFAULT_BOOST_CAP;
+  if(s.settings.pinHash===undefined) s.settings.pinHash=null;
+  if(s.settings.pending===undefined) s.settings.pending=null;
+  if(!s.settings.tierCoins) s.settings.tierCoins={};
+  if(!s.challenges) s.challenges=DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1], limit:0 }; });
+  s.challenges.forEach(function(c){ if(c.limit===undefined) c.limit=0; });
   if(!s.challengeLogs) s.challengeLogs=[];
   if(!s.wheelLog) s.wheelLog=[];
   if(s.wheel===undefined) s.wheel=null;
@@ -1265,8 +1520,8 @@ function renderHeader(){
   return ''+
   '<div class="hud">'+
     '<div class="hud-top">'+
-      '<span class="wordmark">Ascend</span>'+
-      '<button class="icon-btn cog-btn" data-action="goto-settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>'+
+      '<span class="wordmark" data-action="wordmark-tap" style="cursor:default;user-select:none;-webkit-user-select:none;">Ascend</span>'+
+      ''+
     '</div>'+
     '<div class="hud-main">'+
       '<div class="glyph-wrap">'+growthGlyph(d.level)+'</div>'+
@@ -1277,10 +1532,10 @@ function renderHeader(){
       '</div>'+
     '</div>'+
     '<div class="hud-stats">'+
-      '<div class="hud-stat"><span class="hud-stat-label">Points</span><span class="hud-stat-val c-gold">'+d.points+'</span></div>'+
-      '<div class="hud-stat"><span class="hud-stat-label">Current streak</span><span class="hud-stat-val c-sage">'+d.bestStreak+'d</span></div>'+
+      '<div class="hud-stat"><span class="hud-stat-label">Coins</span><span class="hud-stat-val c-gold"><i class="coin"></i>'+fmtMoney(state.wallet.cents)+'</span></div>'+
+      '<div class="hud-stat"><span class="hud-stat-label">Boost</span><span class="hud-stat-val c-peri">+'+boostPercent()+'%</span></div>'+
+      '<div class="hud-stat"><span class="hud-stat-label">Streak</span><span class="hud-stat-val c-sage">'+d.bestStreak+'d</span></div>'+
       '<div class="hud-stat"><span class="hud-stat-label">Best ever</span><span class="hud-stat-val">'+d.bestStreakEver+'d</span></div>'+
-      '<div class="hud-stat"><span class="hud-stat-label">Wallet</span><span class="hud-stat-val c-gold">'+fmtMoney(state.wallet.cents)+'</span></div>'+
     '</div>'+
   '</div>';
 }
@@ -1292,7 +1547,8 @@ var TABS=[
   {id:'today',label:'Today'},
   {id:'habits',label:'Habits'},
   {id:'tasks',label:'Tasks'},
-  {id:'shop',label:'Shop'},
+  {id:'challenges',label:'Challenges'},
+  {id:'wallet',label:'Coins'},
   {id:'stats',label:'Stats'}
 ];
 function renderTabs(){
@@ -1307,25 +1563,31 @@ function renderTabs(){
 /* =====================================================================
    RENDER — TODAY
    ===================================================================== */
-function renderToday(){
+function dueHtml(task){
+  if(!task.deadline) return '';
+  var over=compareKeys(task.deadline,todayKey())<0;
+  return '<div class="habit-meta'+(over?' overdue':'')+'">'+(over?'Overdue \u00b7 ':'Due ')+formatDateHuman(task.deadline)+'</div>';
+}
+function renderToday(glance){
   var t=todayKey();
-  var html='';
   var activeHabits=(state.habits||[]).filter(function(h){ return !h.archived; });
   var todoHabits=activeHabits.filter(function(h){ return compareKeys(h.createdAt,t)<=0; });
   var doneCount=todoHabits.filter(function(h){ return h.completions.hasOwnProperty(t); }).length;
 
   var habitsInner='<div class="row-between" style="margin-bottom:10px;"><h2 class="section-title" style="margin:0;">Today\'s habits</h2><span class="faint">'+doneCount+' / '+todoHabits.length+'</span></div>';
+  if(todoHabits.length) habitsInner+='<div class="day-meter">'+meter(doneCount,todoHabits.length,'var(--sage)')+'</div>';
   if(!todoHabits.length){
-    habitsInner+='<div class="empty">No habits yet. Add one from the Habits tab to start your streak.</div>';
+    habitsInner+='<div class="empty">No habits yet. Add one from the Habits tab to start a streak.</div>';
   } else {
     habitsInner+='<div class="stack">';
     todoHabits.forEach(function(h){
       var isDone=h.completions.hasOwnProperty(t);
+      var isRest=!isDone && (h.freezes||[]).indexOf(t)!==-1;
       var streak=currentStreak(h);
       habitsInner+='<div class="row-between">'+
         '<div class="row">'+
-          '<button class="check-circle'+(isDone?' done':'')+'" data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+t+'" aria-label="Mark '+esc(h.name)+' done">'+checkIconSvg()+'</button>'+
-          '<div><div>'+esc(h.name)+'</div><div class="habit-meta">'+(streak>0?streak+'-day streak':'no streak yet')+'</div></div>'+
+          '<button class="check-circle'+(isDone?' done':'')+(isRest?' rest':'')+(ui.pop===h.id+'|'+t?' pop':'')+'" data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+t+'" aria-label="Mark '+esc(h.name)+' done">'+checkIconSvg()+'</button>'+
+          '<div><div>'+esc(h.name)+'</div><div class="habit-meta">'+(isRest?'Rest day \u00b7 streak safe':(streak>0?streak+'-day streak':'no streak yet'))+'</div></div>'+
         '</div>'+
         '<span class="diff-tag diff-'+h.difficulty+'">'+h.difficulty+'</span>'+
       '</div>';
@@ -1333,26 +1595,36 @@ function renderToday(){
     habitsInner+='</div>';
   }
 
-  var openTasks=(state.tasks||[]).filter(function(x){ return !x.done; }).slice(0,5);
-  var tasksInner='<h2 class="section-title" style="margin-bottom:10px;">Open tasks</h2>';
+  var allOpen=(state.tasks||[]).filter(function(x){ return !x.done; }).sort(function(a,b){
+    if(a.deadline&&b.deadline) return compareKeys(a.deadline,b.deadline);
+    if(a.deadline) return -1; if(b.deadline) return 1; return 0;
+  });
+  var openTasks=allOpen.slice(0,glance?12:5);
+  var tasksInner='<div class="row-between" style="margin-bottom:10px;"><h2 class="section-title" style="margin:0;">Open tasks</h2><span class="faint">'+allOpen.length+' open</span></div>';
   if(!openTasks.length){
-    tasksInner+='<div class="empty">Nothing on your one-off list right now.</div>';
+    tasksInner+='<div class="empty">All clear. Nothing on your list right now.</div>';
   } else {
     tasksInner+='<div class="stack">';
     openTasks.forEach(function(task){
       tasksInner+='<div class="row-between">'+
-        '<div class="row"><button class="check-circle" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><span>'+esc(task.name)+'</span></div>'+
+        '<div class="row"><button class="check-circle'+(ui.pop==='t|'+task.id?' pop':'')+'" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><div><div>'+esc(task.name)+'</div>'+dueHtml(task)+'</div></div>'+
         '<span class="faint c-gold">+'+task.points+'</span>'+
       '</div>';
     });
     tasksInner+='</div>';
+    if(allOpen.length>openTasks.length) tasksInner+='<div class="faint" style="margin-top:10px;">+ '+(allOpen.length-openTasks.length)+' more in the Tasks tab</div>';
   }
 
-
-  html+=renderWheelCard();
-  html+=card('Habits',habitsInner);
-  html+=card('Tasks',tasksInner);
-  html+=renderChallengesCard(false);
+  var html='';
+  if(glance){
+    html+=card('Tasks',tasksInner)+card('Habits',habitsInner);
+  } else {
+    var chalToday=state.challengeLogs.filter(function(l){ return l.dateKey===t; }).length;
+    var w=wheelToday();
+    var hint=w?(w.status==='pending'?'Wheel mission waiting':'Wheel done'):'Wheel ready to spin';
+    var chalInner='<div class="link-row"><div><h2 class="section-title" style="margin:0 0 2px;">Challenges</h2><div class="habit-meta">'+chalToday+' done today \u00b7 '+hint+'</div></div><button class="btn btn-sm" data-action="set-tab" data-tab="challenges">Open</button></div>';
+    html+=card('Habits',habitsInner)+card('Tasks',tasksInner)+card(null,chalInner);
+  }
   return html;
 }
 function renderWheelCard(){
@@ -1361,11 +1633,11 @@ function renderWheelCard(){
     inner='<h2 class="section-title" style="margin-bottom:0;text-align:center;">Daily wheel</h2>'+
       '<div class="wheel-wrap">'+wheelSvg()+'</div>'+
       '<button class="btn btn-primary btn-block" data-action="spin-wheel">Spin (once a day)</button>'+
-      '<div class="faint" style="text-align:center;margin-top:8px;">Spin to get a mission. Do it to claim the bonus prize.</div>';
+      '<div class="faint" style="text-align:center;margin-top:8px;">Spin for a mission. Finish it to claim the bonus prize.</div>';
   } else if(w.status==='pending'){
     inner='<h2 class="section-title" style="margin-bottom:6px;">Wheel mission</h2>'+
       '<div style="font-size:16px;margin-bottom:4px;">'+esc(w.mission)+'</div>'+
-      '<div class="faint c-gold" style="margin-bottom:12px;">Prize: +'+w.points+'p'+(w.coins?' \u00b7 +'+fmtMoney(w.coins):'')+'</div>'+
+      '<div class="faint c-gold" style="margin-bottom:12px;">Prize: +'+w.points+' xp'+(w.coins?' \u00b7 +'+fmtMoney(w.coins):'')+'</div>'+
       '<button class="btn btn-sage btn-block" data-action="claim-wheel">Done \u2014 claim prize</button>';
   } else {
     inner='<h2 class="section-title" style="margin-bottom:6px;">Wheel mission</h2>'+
@@ -1373,45 +1645,77 @@ function renderWheelCard(){
   }
   return card('Bonus',inner);
 }
-function renderChallengesCard(full){
-  var inner='<div class="row-between" style="margin-bottom:10px;"><h2 class="section-title" style="margin:0;">Challenges</h2><span class="faint">repeat as often as you like</span></div>';
-  if(!state.challenges.length) inner+='<div class="empty">No challenges yet.</div>';
+function renderChallengesTab(){
+  var html='';
+  var inner='<div class="row-between" style="margin-bottom:12px;"><h2 class="section-title" style="margin:0;">Repeatable challenges</h2><span class="faint">'+state.challenges.length+' total</span></div>';
+  if(!state.challenges.length) inner+='<div class="empty">No challenges yet. Add one below \u2014 something small you can repeat, like a walk or a glass of water.</div>';
   else{
     inner+='<div class="stack">';
-    state.challenges.forEach(function(c){
-      var n=challengeCountToday(c.id);
-      if(ui.pendingDeleteKind==='challenge' && ui.pendingDeleteId===c.id){
-        inner+='<div class="confirm-inline"><span class="muted">Remove "'+esc(c.name)+'"?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="challenge" data-id="'+c.id+'">Yes</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
+    state.challenges.forEach(function(c,idx){
+      var n=challengeCountToday(c.id), total=challengeCountTotal(c.id);
+      var atLimit=c.limit>0 && n>=c.limit;
+      if(ui.editingChallengeId===c.id){
+        inner+='<div class="edit-panel"><form data-form="edit-challenge" class="stack"><input type="hidden" name="id" value="'+c.id+'">'+
+          '<div class="field"><label for="ec-name-'+c.id+'">Challenge</label><input type="text" id="ec-name-'+c.id+'" name="name" value="'+esc(c.name)+'" maxlength="60" required></div>'+
+          '<div class="field-row"><div class="field"><label for="ec-pts-'+c.id+'">XP each</label><input type="number" id="ec-pts-'+c.id+'" name="points" value="'+c.points+'" min="1" max="500"></div>'+
+          '<div class="field"><label for="ec-lim-'+c.id+'">Max per day (0 = no limit)</label><input type="number" id="ec-lim-'+c.id+'" name="limit" value="'+(c.limit||0)+'" min="0" max="99"></div></div>'+
+          '<div class="row"><button type="submit" class="btn btn-sage">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-challenge">Cancel</button></div></form></div>';
         return;
       }
-      inner+='<div class="chal-row"><div><div>'+esc(c.name)+'</div><div class="habit-meta">+'+c.points+'p each \u00b7 done today: '+n+'</div></div>'+
+      if(ui.pendingDeleteKind==='challenge' && ui.pendingDeleteId===c.id){
+        inner+='<div class="confirm-inline"><span class="muted">Remove "'+esc(c.name)+'"?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="challenge" data-id="'+c.id+'">Yes, remove</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
+        return;
+      }
+      inner+='<div class="chal-row"><div style="min-width:0;"><div>'+esc(c.name)+'</div>'+
+        '<div class="chal-meta"><span class="chip chip-gold">+'+c.points+' xp</span><span class="chip">today '+n+(c.limit>0?' / '+c.limit:'')+'</span><span class="chip">all time '+total+'</span></div>'+
+        '<div class="row" style="margin-top:8px;"><button class="icon-btn" data-action="edit-challenge" data-id="'+c.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="challenge" data-id="'+c.id+'">Remove</button>'+
+        '<div class="reorder-col"><button class="reorder-btn" data-action="move-challenge-up" data-id="'+c.id+'" '+(idx===0?'disabled':'')+' aria-label="Move up">&#9650;</button><button class="reorder-btn" data-action="move-challenge-down" data-id="'+c.id+'" '+(idx===state.challenges.length-1?'disabled':'')+' aria-label="Move down">&#9660;</button></div></div></div>'+
         '<div class="row">'+(n>0?'<button class="btn btn-ghost btn-sm" data-action="undo-challenge" data-id="'+c.id+'">Undo</button>':'')+
-        '<button class="btn btn-sage btn-sm" data-action="log-challenge" data-id="'+c.id+'">+ Done</button>'+
-        (full?'<button class="icon-btn" data-action="ask-delete" data-kind="challenge" data-id="'+c.id+'">Remove</button>':'')+'</div></div>';
+        '<button class="btn btn-sage" data-action="log-challenge" data-id="'+c.id+'" '+(atLimit?'disabled':'')+'>'+(atLimit?'Done':'+ Done')+'</button></div></div>';
     });
     inner+='</div>';
   }
-  if(full){
-    inner+='<div class="divider"></div>';
-    if(ui.showAddChallenge){
-      inner+='<form data-form="add-challenge" class="stack"><div class="field-row"><div class="field" style="flex:2;"><label for="ch-name">Challenge</label><input type="text" id="ch-name" name="name" placeholder="e.g. Take a walk \u2014 1 km" maxlength="60" required></div><div class="field"><label for="ch-pts">Points</label><input type="number" id="ch-pts" name="points" value="5" min="1" max="500"></div></div><div class="row"><button type="submit" class="btn btn-sage">Add</button><button type="button" class="btn btn-ghost" data-action="cancel-add-challenge">Cancel</button></div></form>';
-    } else inner+='<button class="btn btn-sage btn-block" data-action="show-add-challenge">+ Add a challenge</button>';
-  }
-  return card('Repeatable',inner);
+  inner+='<div class="divider"></div>';
+  if(ui.showAddChallenge){
+    inner+='<form data-form="add-challenge" class="stack"><div class="field"><label for="ch-name">Challenge</label><input type="text" id="ch-name" name="name" placeholder="e.g. Take a walk \u2014 1 km" maxlength="60" required autofocus></div>'+
+      '<div class="field-row"><div class="field"><label for="ch-pts">XP each</label><input type="number" id="ch-pts" name="points" value="5" min="1" max="500"></div>'+
+      '<div class="field"><label for="ch-lim">Max per day (0 = no limit)</label><input type="number" id="ch-lim" name="limit" value="0" min="0" max="99"></div></div>'+
+      '<div class="row"><button type="submit" class="btn btn-sage">Add challenge</button><button type="button" class="btn btn-ghost" data-action="cancel-add-challenge">Cancel</button></div></form>';
+  } else inner+='<button class="btn btn-sage btn-block" data-action="show-add-challenge">+ Add a challenge</button>';
+  html+=card(null,inner);
+  html+=renderWheelCard();
+  return html;
 }
-function renderWalletCard(){
-  var w=state.wallet, cap=state.settings.coinCapCents, day=w.daily[todayKey()]||0;
-  var inner='<h2 class="section-title" style="margin-bottom:8px;">Wallet</h2>'+
-    '<div class="row-between" style="margin-bottom:6px;"><span class="hud-stat-val c-gold">'+fmtMoney(w.cents)+'</span><span class="faint">max '+fmtMoney(cap)+'</span></div>'+
+function renderWallet(){
+  var w=state.wallet, cap=state.settings.coinCapCents, day=w.daily[todayKey()]||0, boost=boostPercent();
+  var bcap=state.settings.boostCap;
+  var inner='<div class="row-between" style="align-items:flex-end;margin-bottom:8px;"><div><span class="eyebrow" style="margin-bottom:2px;">Balance</span><span class="big-num c-gold"><i class="coin"></i>'+fmtMoney(w.cents)+'</span></div><span class="faint">max '+fmtMoney(cap)+'</span></div>'+
     meter(w.cents,cap,'var(--gold)')+
-    '<div class="faint" style="margin:6px 0 12px;">Earned today '+fmtMoney(day)+' / '+fmtMoney(state.settings.dailyCoinCapCents)+(w.cents>=cap?' \u00b7 wallet full \u2014 spend some!':'')+'</div>'+
-    '<form data-form="spend-coins"><div class="field-row"><div class="field" style="flex:2;"><label for="sp-name">Spent on</label><input type="text" id="sp-name" name="name" placeholder="e.g. chocolate bar" maxlength="60" required></div><div class="field"><label for="sp-amt">Amount ($)</label><input type="number" id="sp-amt" name="amount" step="0.05" min="0.05" value="1.00"></div></div><button type="submit" class="btn btn-peri btn-block">Spend coins</button></form>';
+    '<div class="faint" style="margin:8px 0 14px;">Earned today '+fmtMoney(day)+(w.cents>=cap-0.5?' \u00b7 wallet full \u2014 spend some!':'')+'</div>'+
+    '<form data-form="spend-coins"><div class="spend-row"><div class="field"><label for="sp-amt">Amount spent ($)</label><input type="number" id="sp-amt" name="amount" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" required></div><button type="submit" class="btn btn-peri">Spend</button></div></form>';
+  var html=card('Real-world coins',inner);
+
+  var rows='';
+  (state.habits||[]).filter(function(h){ return !h.archived; }).forEach(function(h){
+    var s=currentStreak(h), b=Math.floor(s/BOOST_STREAK_DAYS)*BOOST_PER_BLOCK;
+    var toNext=BOOST_STREAK_DAYS-(s%BOOST_STREAK_DAYS);
+    rows+='<div class="row-between"><span>'+esc(h.name)+'</span><span class="faint">'+s+'d \u00b7 <span class="c-peri">+'+b+'%</span> \u00b7 next in '+toNext+'d</span></div>';
+  });
+  var boostInner='<div class="row-between" style="margin-bottom:6px;"><h2 class="section-title" style="margin:0;">Streak boost</h2><span class="hud-stat-val c-peri">+'+boost+'%</span></div>'+
+    meter(boost,Math.max(1,bcap),'var(--peri)')+
+    '<div class="faint" style="margin:8px 0 12px;">Every '+BOOST_STREAK_DAYS+' days in a row on a habit adds +'+BOOST_PER_BLOCK+'% to the coins you earn. Boosts from all habits stack up to a max of +'+bcap+'%. A broken streak takes its boost with it \u2014 use a rest day to protect it.</div>'+
+    (rows?'<div class="stack">'+rows+'</div>':'<div class="empty">Add a habit to start building a boost.</div>');
+  html+=card(null,boostInner);
+
   if(w.spent.length){
-    inner+='<div class="divider"></div><div class="stack">';
-    w.spent.slice().reverse().slice(0,5).forEach(function(p){ inner+='<div class="row-between"><span class="muted">'+esc(p.name)+'</span><span class="faint">'+formatDateHuman(p.at)+' \u00b7 -'+fmtMoney(p.cents)+'</span></div>'; });
-    inner+='</div>';
+    var h2='<h2 class="section-title" style="margin-bottom:10px;">Recent spending</h2><div class="stack">';
+    w.spent.slice().reverse().slice(0,8).forEach(function(p,i){
+      h2+='<div class="row-between"><span class="muted">'+(p.name?esc(p.name):'Spent')+'</span><span class="row"><span class="faint">'+formatDateHuman(p.at)+' \u00b7 -'+fmtMoney(p.cents)+'</span>'+(i===0?'<button class="icon-btn" data-action="undo-spend" data-id="'+p.id+'">Undo</button>':'')+'</span></div>';
+    });
+    h2+='</div>';
+    html+=card(null,h2);
   }
-  return card('Real-world coins',inner);
+  return html;
 }
 function renderActiveTimerBlock(){
   var at=state.pcLedger.activeTimer;
@@ -1471,9 +1775,9 @@ function renderHabits(){
       listInner+='<div class="habit-item">'+
         '<div class="row-between">'+
           '<div class="row">'+
-            '<button class="check-circle'+(isDone?' done':'')+'" data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+t+'" aria-label="Toggle today">'+checkIconSvg()+'</button>'+
+            '<button class="check-circle'+(isDone?' done':'')+((!isDone&&(h.freezes||[]).indexOf(t)!==-1)?' rest':'')+(ui.pop===h.id+'|'+t?' pop':'')+'" data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+t+'" aria-label="Toggle today">'+checkIconSvg()+'</button>'+
             '<div><button class="habit-name-btn" data-action="expand-habit" data-habit="'+h.id+'">'+esc(h.name)+'</button>'+
-              '<div class="habit-meta">'+streak+'-day streak'+(mult>1?' · '+mult+'x bonus':'')+(best>streak?' · best '+best:'')+'</div></div>'+
+              '<div class="habit-meta">'+streak+'-day streak'+(mult>1?' · '+mult+'x xp':'')+(streak>=BOOST_STREAK_DAYS?' · +'+Math.floor(streak/BOOST_STREAK_DAYS)*BOOST_PER_BLOCK+'% coins':'')+(best>streak?' · best '+best:'')+'</div></div>'+
           '</div>'+
           '<div class="row">'+
             '<span class="cat-tag" style="color:'+catInfo.color+';">'+catInfo.label+'</span>'+
@@ -1502,7 +1806,8 @@ function renderHabitDetail(h){
       '<div class="row"><button type="submit" class="btn btn-sage">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-habit">Cancel</button></div>'+
     '</form></div>';
   }
-  var freezesLeft=2-freezesUsedInMonth(h,todayMonthKey());
+  var tNow=todayKey(), yNow=addDaysKey(tNow,-1);
+  var restUsed=restUsedInWeek(h,tNow);
   var refDate=new Date();
   refDate.setMonth(refDate.getMonth()+ui.calMonthOffset);
   var y=refDate.getFullYear(), m=refDate.getMonth();
@@ -1530,10 +1835,12 @@ function renderHabitDetail(h){
     html+='<div class="'+cls+'" '+(isFuture||beforeCreation?'':'data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+key+'"')+'>'+day+'</div>';
   }
   html+='</div>';
-  html+='<div class="row-between" style="margin-top:12px;">'+
-    '<span class="faint">Green = done · Blue = streak freeze</span>'+
-    '<button class="btn btn-sm" data-action="use-freeze" data-habit="'+h.id+'" '+(freezesLeft<=0?'disabled':'')+'>Use freeze ('+Math.max(0,freezesLeft)+' left)</button>'+
-  '</div>';
+  html+='<div class="faint" style="margin-top:10px;">Green = done \u00b7 Blue = rest day</div>';
+  html+='<div class="edit-panel" style="margin-top:10px;"><div class="row-between" style="margin-bottom:8px;"><strong style="font-size:13px;">Emergency rest day</strong><span class="chip chip-peri">'+(restUsed>=1?'used this week':'1 available this week')+'</span></div>'+
+    '<div class="faint" style="margin-bottom:10px;">Protects your streak when life gets in the way. One per week, can\'t be bought.</div>'+
+    '<div class="row"><button class="btn btn-sm" data-action="use-rest" data-offset="0" data-habit="'+h.id+'" '+(canRest(h,tNow)?'':'disabled')+'>Rest today</button>'+
+    '<button class="btn btn-sm" data-action="use-rest" data-offset="-1" data-habit="'+h.id+'" '+(canRest(h,yNow)?'':'disabled')+'>Rest yesterday</button>'+
+    (restUsed>=1?'<button class="btn btn-ghost btn-sm" data-action="cancel-rest" data-habit="'+h.id+'">Cancel this week\'s</button>':'')+'</div></div>';
   html+='<div class="faint" style="margin-top:8px;">Longest streak ever: '+longestStreakEver(h)+' days</div>';
   if(ui.pendingDeleteKind==='habit' && ui.pendingDeleteId===h.id){
     html+='<div class="confirm-inline" style="margin-top:12px;"><span class="muted">Archive this habit?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="habit" data-id="'+h.id+'">Yes, archive</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
@@ -1593,7 +1900,7 @@ function renderTasks(){
         openInner+='<div class="confirm-inline"><span class="muted">Remove "'+esc(task.name)+'"?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="task" data-id="'+task.id+'">Yes, remove</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
       } else {
         openInner+='<div class="row-between">'+
-          '<div class="row"><button class="check-circle" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><div><div>'+esc(task.name)+'</div>'+(task.deadline?'<div class="habit-meta">Due '+formatDateHuman(task.deadline)+'</div>':'')+'</div></div>'+
+          '<div class="row"><button class="check-circle'+(ui.pop==='t|'+task.id?' pop':'')+'" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><div><div>'+esc(task.name)+'</div>'+dueHtml(task)+'</div></div>'+
           '<div class="row"><span class="faint c-gold">+'+task.points+'</span><button class="icon-btn" data-action="edit-task" data-task="'+task.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="task" data-id="'+task.id+'">Remove</button></div>'+
         '</div>';
       }
@@ -1610,78 +1917,13 @@ function renderTasks(){
     doneInner+='</div>';
     html+=card(null,doneInner);
   }
-  html+=renderChallengesCard(true);
   return html;
 }
 
 /* =====================================================================
    RENDER — SHOP
    ===================================================================== */
-function renderShop(){
-  var d=computeDerived();
-  var html='';
-  var addInner='';
-  if(ui.showAddShopItem){
-    addInner='<form data-form="add-shop-item" class="stack">'+
-      '<div class="field-row">'+
-        '<div class="field" style="flex:2;"><label for="shop-name">Leisure item</label><input type="text" id="shop-name" name="name" placeholder="e.g. 30 min gaming" maxlength="60" required></div>'+
-        '<div class="field"><label for="shop-cost">Cost</label><input type="number" id="shop-cost" name="cost" value="50" min="1" max="100000"></div>'+
-      '</div>'+
-      '<div class="row"><button type="submit" class="btn btn-peri">Add to shop</button><button type="button" class="btn btn-ghost" data-action="cancel-add-shop-item">Cancel</button></div>'+
-    '</form>';
-  } else {
-    addInner='<button class="btn btn-peri btn-block" data-action="show-add-shop-item">+ Add a shop item</button>';
-  }
-  html+=renderWalletCard();
-  html+=card('New · '+d.points+' points available',addInner);
-
-  var listInner='<h2 class="section-title" style="margin-bottom:10px;">Shop</h2>';
-  if(!state.shopItems.length){ listInner+='<div class="empty">No leisure items yet — add one above.</div>'; }
-  else{
-    listInner+='<div class="stack">';
-    state.shopItems.forEach(function(item,idx){
-      if(ui.editingShopItemId===item.id){
-        listInner+='<div class="edit-panel"><form data-form="edit-shop-item" class="stack">'+
-          '<input type="hidden" name="id" value="'+item.id+'">'+
-          '<div class="field-row">'+
-            '<div class="field" style="flex:2;"><label for="es-name-'+item.id+'">Leisure item</label><input type="text" id="es-name-'+item.id+'" name="name" value="'+esc(item.name)+'" maxlength="60" required></div>'+
-            '<div class="field"><label for="es-cost-'+item.id+'">Cost</label><input type="number" id="es-cost-'+item.id+'" name="cost" value="'+item.cost+'" min="1" max="100000"></div>'+
-          '</div>'+
-          '<div class="row"><button type="submit" class="btn btn-peri">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-shop-item">Cancel</button></div>'+
-        '</form></div>';
-      } else if(ui.pendingDeleteKind==='shop' && ui.pendingDeleteId===item.id){
-        listInner+='<div class="confirm-inline"><span class="muted">Remove "'+esc(item.name)+'"?</span><button class="btn btn-brick btn-sm" data-action="confirm-delete" data-kind="shop" data-id="'+item.id+'">Yes, remove</button><button class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
-      } else {
-        var afford=d.points>=item.cost;
-        listInner+='<div class="row-between">'+
-          '<span>'+esc(item.name)+'</span>'+
-          '<div class="row">'+
-            '<span class="faint c-peri">'+item.cost+'p</span>'+
-            '<button class="btn btn-peri btn-sm" data-action="buy-item" data-item="'+item.id+'" '+(afford?'':'disabled')+'>Redeem</button>'+
-            '<button class="icon-btn" data-action="edit-shop-item" data-item="'+item.id+'">Edit</button>'+
-            '<button class="icon-btn" data-action="ask-delete" data-kind="shop" data-id="'+item.id+'">Remove</button>'+
-            '<div class="reorder-col">'+
-              '<button class="reorder-btn" data-action="move-shop-up" data-item="'+item.id+'" '+(idx===0?'disabled':'')+' aria-label="Move up">&#9650;</button>'+
-              '<button class="reorder-btn" data-action="move-shop-down" data-item="'+item.id+'" '+(idx===state.shopItems.length-1?'disabled':'')+' aria-label="Move down">&#9660;</button>'+
-            '</div>'+
-          '</div>'+
-        '</div>';
-      }
-    });
-    listInner+='</div>';
-  }
-  html+=card(null,listInner);
-
-  if(state.purchases.length){
-    var histInner='<h2 class="section-title" style="margin-bottom:10px;">Redeemed recently</h2><div class="stack">';
-    state.purchases.slice().reverse().slice(0,8).forEach(function(p){
-      histInner+='<div class="row-between"><span class="muted">'+esc(p.itemName)+'</span><span class="faint">'+formatDateHuman(p.at)+' · -'+p.cost+'p</span></div>';
-    });
-    histInner+='</div>';
-    html+=card(null,histInner);
-  }
-  return html;
-}
+/* Shop UI is hidden for now; shop data and actions are kept in state so it can return later. */
 
 /* =====================================================================
    RENDER — PC TIME
@@ -1769,7 +2011,7 @@ function renderStats(){
     if(pts>maxPts) maxPts=pts;
     return pts;
   });
-  var chartInner='<h2 class="section-title" style="margin-bottom:0;">Points — last 7 days</h2><div class="bar-chart">';
+  var chartInner='<h2 class="section-title" style="margin-bottom:0;">XP — last 7 days</h2><div class="bar-chart">';
   days.forEach(function(dk,idx){
     var h=Math.max(3,Math.round((dayPoints[idx]/maxPts)*90));
     chartInner+='<div class="bar-col"><div class="bar-shape" style="height:'+h+'px;"></div><div class="bar-col-label">'+dayPoints[idx]+'</div><div class="bar-col-label">'+formatDateHuman(dk).split(' ')[1]+'</div></div>';
@@ -1808,7 +2050,7 @@ function renderStats(){
     '<div class="totals-cell"><div class="totals-val">'+d.xp+'</div><div class="totals-label">Total XP earned</div></div>'+
     '<div class="totals-cell"><div class="totals-val">'+d.totalCompletions+'</div><div class="totals-label">Habit check-ins</div></div>'+
     '<div class="totals-cell"><div class="totals-val">'+d.tasksCompleted+'</div><div class="totals-label">Tasks completed</div></div>'+
-    '<div class="totals-cell"><div class="totals-val">'+d.pointsSpent+'</div><div class="totals-label">Points spent</div></div>'+
+    '<div class="totals-cell"><div class="totals-val">'+d.restDays+'</div><div class="totals-label">Rest days used</div></div>'+
     '<div class="totals-cell"><div class="totals-val">'+(state.luckyBonusCount||0)+'</div><div class="totals-label">Lucky bonuses hit</div></div>'+
     '<div class="totals-cell"><div class="totals-val">'+d.bestStreakEver+'</div><div class="totals-label">Longest streak ever</div></div>'+
     '<div class="totals-cell"><div class="totals-val">'+unlockedIds.length+' / '+ACHIEVEMENTS.length+'</div><div class="totals-label">Achievements</div></div>'+
@@ -1821,26 +2063,128 @@ function renderStats(){
 /* =====================================================================
    RENDER — SETTINGS
    ===================================================================== */
+/* =====================================================================
+   SETTINGS GATE — hidden door (tap the wordmark 7x), PIN, then a cooling-off
+   wait. It's friction against impulse changes, not real security.
+   ===================================================================== */
+var COOLDOWN_MS=45000, LOCKOUT_MS=5*60000, TAPS_NEEDED=7;
+var gateTickHandle=null;
+function pinHash(p){
+  var s='ascend|'+p+'|v1', h=5381;
+  for(var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0;
+  return String(h>>>0);
+}
+function lockSettings(){ ui.settingsUnlocked=false; ui.cooldownUntil=0; ui.gateError=null; stopGateTick(); }
+function openSettingsDoor(){
+  if(location.hash==='#glance') location.hash='';
+  lockSettings();
+  ui.activeTab='settings'; ui.fade=true; render(); startGateTick();
+  try{ window.scrollTo(0,0); }catch(e){}
+}
+function wordmarkTap(){
+  var now=Date.now();
+  ui.taps=ui.taps.filter(function(t){ return now-t<4000; });
+  ui.taps.push(now);
+  if(ui.taps.length>=TAPS_NEEDED){ ui.taps=[]; openSettingsDoor(); }
+}
+function submitPin(pin,pin2){
+  pin=String(pin||'').trim();
+  if(!state.settings.pinHash){
+    if(!/^\d{4,8}$/.test(pin)){ ui.gateError='Use 4 to 8 digits.'; render(); return; }
+    if(pin!==String(pin2||'').trim()){ ui.gateError='The two PINs don\'t match.'; render(); return; }
+    state.settings.pinHash=pinHash(pin); ui.settingsUnlocked=true; ui.cooldownUntil=0; ui.gateError=null;
+    persist(); render(); queueToast('PIN set'); return;
+  }
+  if(pinHash(pin)===state.settings.pinHash){
+    ui.settingsUnlocked=true; ui.pinFails=0; ui.gateError=null;
+    ui.cooldownUntil=Date.now()+COOLDOWN_MS;
+    render(); startGateTick(); return;
+  }
+  ui.pinFails++;
+  if(ui.pinFails>=3){ ui.pinFails=0; ui.lockoutUntil=Date.now()+LOCKOUT_MS; ui.gateError=null; startGateTick(); }
+  else ui.gateError='Wrong PIN ('+(3-ui.pinFails)+' tries left).';
+  render();
+}
+function changePin(pin,pin2){
+  pin=String(pin||'').trim();
+  if(!/^\d{4,8}$/.test(pin)){ queueToast('PIN must be 4 to 8 digits'); render(); return; }
+  if(pin!==String(pin2||'').trim()){ queueToast('PINs don\'t match'); render(); return; }
+  state.settings.pinHash=pinHash(pin); persist(); render(); queueToast('PIN changed');
+}
+function startGateTick(){
+  stopGateTick();
+  gateTickHandle=setInterval(function(){
+    var now=Date.now();
+    var cd=document.querySelectorAll('[data-cooldown]'), lo=document.querySelectorAll('[data-lockout]');
+    for(var i=0;i<cd.length;i++) cd[i].textContent=Math.max(0,Math.ceil((ui.cooldownUntil-now)/1000));
+    for(var j=0;j<lo.length;j++){ var s=Math.max(0,Math.ceil((ui.lockoutUntil-now)/1000)); lo[j].textContent=Math.floor(s/60)+':'+pad2(s%60); }
+    var doneCd=ui.settingsUnlocked && ui.cooldownUntil && now>=ui.cooldownUntil;
+    var doneLo=ui.lockoutUntil && now>=ui.lockoutUntil;
+    if(doneCd||doneLo){ if(doneLo) ui.lockoutUntil=0; if(doneCd) ui.cooldownUntil=0; render(); stopGateTick(); }
+    if(ui.activeTab!=='settings') stopGateTick();
+  },500);
+}
+function stopGateTick(){ if(gateTickHandle){ clearInterval(gateTickHandle); gateTickHandle=null; } }
+function renderSettingsGate(){
+  var now=Date.now();
+  if(ui.lockoutUntil>now){
+    var s=Math.ceil((ui.lockoutUntil-now)/1000);
+    return card('Locked','<h2 class="section-title">Too many wrong tries</h2><p class="muted" style="margin:0;">Try again in <strong data-lockout>'+Math.floor(s/60)+':'+pad2(s%60)+'</strong>.</p>');
+  }
+  var err=ui.gateError?'<div class="c-brick" style="font-size:13px;margin-bottom:10px;">'+esc(ui.gateError)+'</div>':'';
+  if(!state.settings.pinHash){
+    return card('First time',
+      '<h2 class="section-title">Choose a PIN</h2>'+
+      '<p class="muted" style="margin-top:0;font-size:13px;">This guards your XP, coin and cap settings. Pick something you won\'t type on a whim, 4 to 8 digits. If you forget it, the only way back in is a full data reset.</p>'+err+
+      '<form data-form="pin-submit" class="stack"><div class="field"><label for="pin1">New PIN</label><input type="password" inputmode="numeric" autocomplete="off" id="pin1" name="pin" maxlength="8" required></div>'+
+      '<div class="field"><label for="pin2">Repeat PIN</label><input type="password" inputmode="numeric" autocomplete="off" id="pin2" name="pin2" maxlength="8" required></div>'+
+      '<button type="submit" class="btn btn-primary btn-block">Set PIN</button></form>');
+  }
+  if(!ui.settingsUnlocked){
+    return card('Locked',
+      '<h2 class="section-title">Enter PIN</h2>'+err+
+      '<form data-form="pin-submit" class="stack"><div class="field"><input type="password" inputmode="numeric" autocomplete="off" id="pin1" name="pin" maxlength="8" aria-label="PIN" required></div>'+
+      '<button type="submit" class="btn btn-primary btn-block">Unlock</button></form>');
+  }
+  if(ui.cooldownUntil>now){
+    return card('Cooling off',
+      '<h2 class="section-title">Settings open in <span data-cooldown>'+Math.ceil((ui.cooldownUntil-now)/1000)+'</span>s</h2>'+
+      '<p class="muted" style="margin:0 0 12px;font-size:13px;">A short pause on purpose. If you\'re changing a limit because the day felt hard, it can probably wait.</p>'+
+      '<button class="btn btn-ghost btn-block" data-action="lock-settings">Never mind</button>');
+  }
+  return '';
+}
 function renderSettings(){
+  var gate=renderSettingsGate();
+  if(gate) return gate;
   var html='';
   var formInner='<form data-form="settings" class="stack">'+
     tierFieldsHtml()+
-    '<fieldset><legend>Wallet ($)</legend><div class="field-row">'+
-      '<div class="field"><label for="s-ccap">Max balance ($)</label><input type="number" id="s-ccap" name="coinCap" step="0.5" min="0" value="'+(state.settings.coinCapCents/100)+'"></div>'+
-      '<div class="field"><label for="s-dcap">Max earned per day ($)</label><input type="number" id="s-dcap" name="dailyCoinCap" step="0.1" min="0" value="'+(state.settings.dailyCoinCapCents/100)+'"></div>'+
+    '<fieldset><legend>Coins</legend><div class="field-row">'+
+      '<div class="field"><label for="s-ccap">Max balance ($)</label><input type="number" id="s-ccap" name="coinCap" step="1" min="0" value="'+(state.settings.coinCapCents/100)+'"></div>'+
+      '<div class="field"><label for="s-bcap">Max streak boost (%)</label><input type="number" id="s-bcap" name="boostCap" step="5" min="0" max="1000" value="'+state.settings.boostCap+'"></div>'+
     '</div></fieldset>'+
-    '<fieldset><legend>Points economy</legend>'+
-      '<div class="field"><label for="s-cap">Points cap (0 = unlimited, accumulate freely)</label><input type="number" id="s-cap" name="pointsCap" value="'+state.settings.pointsCap+'" min="0"></div>'+
-    '</fieldset>'+
-    '<button type="submit" class="btn btn-primary btn-block">Save settings</button>'+
+    coinTierFieldsHtml()+
+    '<button type="submit" class="btn btn-primary btn-block">Save changes</button>'+
+    '<div class="faint">Lower values apply right away. Higher values wait 24 hours, then ask you to confirm.</div>'+
   '</form>';
+  var pend=state.settings.pending;
+  if(pend){
+    var left=pend.applyAt-Date.now();
+    html+=card('Scheduled',
+      '<h2 class="section-title" style="margin-bottom:2px;">Pending increases</h2>'+
+      '<div class="faint">'+(left>0?'Can be applied in '+hoursLeftText(left)+'. You\'ll be asked to confirm then.':'Ready \u2014 you\'ll be asked to confirm.')+'</div>'+
+      pendingListHtml(pend)+
+      '<div class="row">'+(left<=0?'<button class="btn btn-primary btn-sm" data-action="apply-pending">Apply now</button>':'')+'<button class="btn btn-ghost btn-sm" data-action="discard-pending">Cancel these changes</button></div>');
+  }
   html+=card('Configuration',formInner);
+  html+=card('Security','<h2 class="section-title" style="margin-bottom:10px;">PIN</h2><form data-form="change-pin" class="stack"><div class="field-row"><div class="field"><label for="np1">New PIN</label><input type="password" inputmode="numeric" autocomplete="off" id="np1" name="pin" maxlength="8"></div><div class="field"><label for="np2">Repeat</label><input type="password" inputmode="numeric" autocomplete="off" id="np2" name="pin2" maxlength="8"></div></div><div class="row"><button type="submit" class="btn">Change PIN</button><button type="button" class="btn btn-ghost" data-action="lock-settings">Lock now</button></div></form>');
 
   var dataInner='<h2 class="section-title" style="margin-bottom:10px;">Your data</h2>'+
     storageStatusLine()+
     '<p class="muted" style="margin-top:0;font-size:13px;">Export a backup any time, or move it to another device by exporting here and importing there.</p>'+
     '<div class="row" style="margin-bottom:10px;"><button class="btn" data-action="open-glance">Open glance view</button></div>'+
-    '<p class="faint" style="margin-top:0;">Glance view = compact screen with today\'s stats and to-dos. Add it to your home screen from Chrome (menu → Add to Home screen) while on that view, or long-press the app icon.</p>'+
+    '<p class="faint" style="margin-top:0;">Glance view = a compact screen with your open tasks and today\'s habits. Long-press the app icon for the shortcut, or open this view and use Chrome\'s menu → Add to Home screen.</p>'+
     '<div class="row"><button class="btn" data-action="export-data">Export JSON backup</button><button class="btn" data-action="trigger-import">Import JSON backup</button></div>'+
     '<input type="file" id="import-file-input" accept="application/json" style="display:none;">';
   html+=card(null,dataInner);
@@ -1865,7 +2209,7 @@ function renderRecapModal(){
   return '<div class="overlay" data-action="dismiss-recap-overlay"><div class="modal" data-action="noop">'+
     '<h2 class="section-title">Recap · '+formatDateHuman(r.dateKey)+'</h2>'+
     '<div class="recap-stat"><span class="muted">Habits completed</span><span>'+r.habitsDone+' / '+r.habitsTotal+'</span></div>'+
-    '<div class="recap-stat"><span class="muted">Points earned</span><span class="c-gold">+'+r.points+'</span></div>'+
+    '<div class="recap-stat"><span class="muted">XP earned</span><span class="c-gold">+'+r.points+'</span></div>'+
     '<button class="btn btn-primary btn-block" style="margin-top:16px;" data-action="dismiss-recap">Got it</button>'+
   '</div></div>';
 }
@@ -1891,7 +2235,9 @@ function renderTabContent(){
     case 'today': return renderToday();
     case 'habits': return renderHabits();
     case 'tasks': return renderTasks();
-    case 'shop': return renderShop();
+    case 'challenges': return renderChallengesTab();
+    case 'wallet': return renderWallet();
+    case 'shop': return renderWallet();
     case 'pctime': return renderPCTime();
     case 'stats': return renderStats();
     case 'settings': return renderSettings();
@@ -1905,15 +2251,17 @@ function render(){
   var html='';
   html+=renderHeader();
   if(location.hash==='#glance'){
-    html+='<div id="tab-content">'+renderToday()+'<button class="btn btn-block" data-action="exit-glance">Open full app</button></div>';
+    html+='<div id="tab-content">'+renderToday(true)+'<button class="btn btn-block" data-action="exit-glance">Open full app</button></div>';
   } else {
     html+=renderTabs();
-    html+='<div id="tab-content">'+renderTabContent()+'</div>';
+    html+='<div id="tab-content"'+(ui.fade?' class="fade"':'')+'>'+renderTabContent()+'</div>';
   }
   html+=renderRecapModal();
+  html+=renderPendingModal();
   html+=renderImportConfirmModal();
   html+=renderToastEl();
   app.innerHTML=html;
+  ui.pop=null; ui.fade=false;
 }
 
 /* =====================================================================
@@ -1925,11 +2273,18 @@ function onClick(e){
   var action=el.getAttribute('data-action');
   switch(action){
     case 'set-tab':
-      ui.activeTab=el.getAttribute('data-tab'); ui.expandedHabitId=null;
-      ui.editingHabitId=null; ui.editingTaskId=null; ui.editingShopItemId=null;
+      if(ui.activeTab==='settings') lockSettings();
+      ui.activeTab=el.getAttribute('data-tab'); ui.expandedHabitId=null; ui.fade=true;
+      ui.editingHabitId=null; ui.editingTaskId=null; ui.editingShopItemId=null; ui.editingChallengeId=null; ui.showAddChallenge=false;
+      try{ window.scrollTo(0,0); }catch(err){}
       ui.pendingDeleteKind=null; ui.pendingDeleteId=null;
       render();
       break;
+    case 'apply-pending': applyPending(); break;
+    case 'discard-pending': discardPending(); break;
+    case 'later-pending': ui.pendingPromptDismissed=true; render(); break;
+    case 'wordmark-tap': wordmarkTap(); break;
+    case 'lock-settings': lockSettings(); ui.activeTab='today'; ui.fade=true; render(); break;
     case 'spin-wheel': spinWheel(); break;
     case 'claim-wheel': claimWheel(); break;
     case 'log-challenge': logChallenge(el.getAttribute('data-id')); break;
@@ -1938,8 +2293,7 @@ function onClick(e){
     case 'cancel-add-challenge': ui.showAddChallenge=false; render(); break;
     case 'open-glance': location.hash='glance'; break;
     case 'exit-glance': location.hash=''; ui.activeTab='today'; render(); break;
-    case 'goto-settings': if(location.hash==='#glance') location.hash=''; ui.activeTab='settings'; render(); break;
-    case 'goto-settings-old': ui.activeTab='settings'; render(); break;
+    case 'goto-settings': openSettingsDoor(); break;
     case 'toggle-habit': toggleHabitDay(el.getAttribute('data-habit'),el.getAttribute('data-date')); break;
     case 'expand-habit':
       var hid=el.getAttribute('data-habit');
@@ -1951,7 +2305,13 @@ function onClick(e){
       break;
     case 'cal-prev': ui.calMonthOffset--; render(); break;
     case 'cal-next': if(ui.calMonthOffset<0){ui.calMonthOffset++; render();} break;
-    case 'use-freeze': useStreakFreeze(el.getAttribute('data-habit')); break;
+    case 'use-rest': useRestDay(el.getAttribute('data-habit'),parseInt(el.getAttribute('data-offset'),10)||0); break;
+    case 'cancel-rest': cancelRestDay(el.getAttribute('data-habit')); break;
+    case 'undo-spend': undoSpend(el.getAttribute('data-id')); break;
+    case 'edit-challenge': ui.editingChallengeId=el.getAttribute('data-id'); render(); break;
+    case 'cancel-edit-challenge': ui.editingChallengeId=null; render(); break;
+    case 'move-challenge-up': moveChallenge(el.getAttribute('data-id'),-1); break;
+    case 'move-challenge-down': moveChallenge(el.getAttribute('data-id'),1); break;
     case 'show-add-habit': ui.showAddHabit=true; render(); break;
     case 'cancel-add-habit': ui.showAddHabit=false; render(); break;
     case 'edit-habit': ui.editingHabitId=el.getAttribute('data-habit'); render(); break;
@@ -2016,13 +2376,16 @@ function onSubmit(e){
     case 'edit-task': editTask(fd.get('id'),fd.get('name'),fd.get('points'),fd.get('deadline')); break;
     case 'add-shop-item': addShopItem(fd.get('name'),fd.get('cost')); break;
     case 'edit-shop-item': editShopItem(fd.get('id'),fd.get('name'),fd.get('cost')); break;
-    case 'add-challenge': addChallenge(fd.get('name'),fd.get('points')); break;
-    case 'spend-coins': spendCoins(fd.get('name'),Math.round(parseFloat(fd.get('amount'))*100)); break;
+    case 'pin-submit': submitPin(fd.get('pin'),fd.get('pin2')); break;
+    case 'change-pin': changePin(fd.get('pin'),fd.get('pin2')); break;
+    case 'add-challenge': addChallenge(fd.get('name'),fd.get('points'),fd.get('limit')); break;
+    case 'edit-challenge': editChallenge(fd.get('id'),fd.get('name'),fd.get('points'),fd.get('limit')); break;
+    case 'spend-coins': spendCoins(Math.round(parseFloat(fd.get('amount'))*100)); break;
     case 'start-emergency': startTimer('emergency',fd.get('reason')); break;
     case 'manual-log': logManualSession(fd.get('type'),fd.get('minutes'),fd.get('reason')); break;
     case 'settings':
-      var sf={ pointsCap:fd.get('pointsCap'), coinCap:fd.get('coinCap'), dailyCoinCap:fd.get('dailyCoinCap') };
-      TIERS.forEach(function(t){ sf[t.id]=fd.get(t.id); });
+      var sf={ coinCap:fd.get('coinCap'), boostCap:fd.get('boostCap') };
+      TIERS.forEach(function(t){ sf[t.id]=fd.get(t.id); sf['coin_'+t.id]=fd.get('coin_'+t.id); });
       updateSettings(sf);
       break;
   }
@@ -2059,6 +2422,9 @@ function attachListenersOnce(){
   document.addEventListener('submit',onSubmit);
   document.addEventListener('change',onChange);
   window.addEventListener('hashchange',render);
+  setInterval(function(){ var p=state&&state.settings&&state.settings.pending; if(p && pendingDue() && !ui.pendingPromptDismissed && !document.querySelector('.overlay')) render(); },30000);
+  document.addEventListener('visibilitychange',function(){ if(document.hidden && ui.activeTab==='settings' && ui.settingsUnlocked){ lockSettings(); ui.activeTab='today'; render(); }
+    else if(!document.hidden && state && state.settings.pending && pendingDue()){ ui.pendingPromptDismissed=false; render(); } });
 }
 function finishInit(loaded,warn){
   state=normalizeState(loaded||defaultState());
