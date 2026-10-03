@@ -322,22 +322,22 @@
 var STORAGE_KEY = 'ascend_state_v1';
 var TIERS = [
   { id:'tiny', label:'Tiny', pts:2, coin:0 },
-  { id:'easy', label:'Easy', pts:5, coin:2 },
-  { id:'medium', label:'Medium', pts:10, coin:5 },
-  { id:'hard', label:'Hard', pts:20, coin:10 },
-  { id:'intense', label:'Intense', pts:35, coin:15 },
-  { id:'epic', label:'Epic', pts:50, coin:25 }
+  { id:'easy', label:'Easy', pts:5, coin:6 },
+  { id:'medium', label:'Medium', pts:10, coin:15 },
+  { id:'hard', label:'Hard', pts:20, coin:30 },
+  { id:'intense', label:'Intense', pts:35, coin:45 },
+  { id:'epic', label:'Epic', pts:50, coin:75 }
 ];
 var DIFFICULTY_POINTS = {}; TIERS.forEach(function(t){ DIFFICULTY_POINTS[t.id]=t.pts; });
 var DEFAULT_COIN_CAP = 10000, DEFAULT_DAILY_COIN_CAP = 0; /* cents; daily cap removed (0 = none) */
 var BOOST_STREAK_DAYS = 14, BOOST_PER_BLOCK = 1, DEFAULT_BOOST_CAP = 100; /* +1% coins per 14-day streak block, per habit, max +100% */
 var WHEEL_MISSIONS = [
-  ['Stretch for 20 minutes',20,5],['Read 1 chapter of a book',20,5],['Go for a run or jog',30,10],
-  ['Take a 30-minute walk',25,5],['Do 20 push-ups (any sets)',20,5],['Tidy your desk or room for 10 minutes',15,0],
-  ['Drink 2 litres of water today',15,0],['Meditate for 10 minutes',20,5],['Cook a proper meal from scratch',25,10],
-  ['Call or message a friend or family',15,0],['Take a cold shower',20,5],['Write a page in a journal',15,0],
-  ['Declutter one drawer or shelf',20,5],['No phone for the first hour after waking',25,5],
-  ['Do a 15-minute workout',25,10],['Plank for 3 minutes in total',20,5]
+  ['Stretch for 20 minutes',20,15],['Read 1 chapter of a book',20,15],['Go for a run or jog',30,30],
+  ['Take a 30-minute walk',25,15],['Do 20 push-ups (any sets)',20,15],['Tidy your desk or room for 10 minutes',15,0],
+  ['Drink 2 litres of water today',15,0],['Meditate for 10 minutes',20,15],['Cook a proper meal from scratch',25,30],
+  ['Call or message a friend or family',15,0],['Take a cold shower',20,15],['Write a page in a journal',15,0],
+  ['Declutter one drawer or shelf',20,15],['No phone for the first hour after waking',25,15],
+  ['Do a 15-minute workout',25,30],['Plank for 3 minutes in total',20,15]
 ];
 var DEFAULT_CHALLENGES = [['Take a walk — 1 km',8],['Do 10 push-ups',5],['Drink a glass of water',2]];
 var DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
@@ -353,54 +353,54 @@ var LUCKY_BONUS_FRACTION = 0.4;
 
 var ACHIEVEMENTS = [
   /* habits */
-  { id:'first_step', name:'First Step', desc:'Complete your first habit', check:function(s,d){ return d.totalCompletions>=1; } },
-  { id:'getting_started', name:'Getting Started', desc:'10 habit check-ins', check:function(s,d){ return d.totalCompletions>=10; } },
-  { id:'fifty', name:'Fifty Strong', desc:'50 habit check-ins', check:function(s,d){ return d.totalCompletions>=50; } },
-  { id:'century', name:'Century Club', desc:'100 habit check-ins', check:function(s,d){ return d.totalCompletions>=100; } },
-  { id:'five_hundred', name:'Five Hundred', desc:'500 habit check-ins', check:function(s,d){ return d.totalCompletions>=500; } },
-  { id:'thousand', name:'Thousand Steps', desc:'1,000 habit check-ins', check:function(s,d){ return d.totalCompletions>=1000; } },
-  { id:'perfect_day', name:'Perfect Day', desc:'Finish every habit in one day (3+ habits)', check:function(s,d){ return perfectDayToday(); } },
-  { id:'deep_breath', name:'Deep Breath', desc:'Use a rest day', check:function(s,d){ return d.restDays>=1; } },
+  { id:'first_step', coin:20, name:'First Step', desc:'Complete your first habit', check:function(s,d){ return d.totalCompletions>=1; } },
+  { id:'getting_started', coin:50, name:'Getting Started', desc:'10 habit check-ins', check:function(s,d){ return d.totalCompletions>=10; } },
+  { id:'fifty', coin:100, name:'Fifty Strong', desc:'50 habit check-ins', check:function(s,d){ return d.totalCompletions>=50; } },
+  { id:'century', coin:200, name:'Century Club', desc:'100 habit check-ins', check:function(s,d){ return d.totalCompletions>=100; } },
+  { id:'five_hundred', coin:500, name:'Five Hundred', desc:'500 habit check-ins', check:function(s,d){ return d.totalCompletions>=500; } },
+  { id:'thousand', coin:1000, name:'Thousand Steps', desc:'1,000 habit check-ins', check:function(s,d){ return d.totalCompletions>=1000; } },
+  { id:'perfect_day', coin:50, name:'Perfect Day', desc:'Finish every habit in one day (3+ habits)', check:function(s,d){ return perfectDayToday(); } },
+  { id:'deep_breath', coin:20, name:'Deep Breath', desc:'Use a rest day', check:function(s,d){ return d.restDays>=1; } },
   /* streaks */
-  { id:'week_strong', name:'One Week Strong', desc:'7-day streak on any habit', check:function(s,d){ return d.bestStreak>=7; } },
-  { id:'fortnight', name:'Two Week Warrior', desc:'14-day streak on any habit', check:function(s,d){ return d.bestStreak>=14; } },
-  { id:'unstoppable', name:'Unstoppable', desc:'30-day streak on any habit', check:function(s,d){ return d.bestStreak>=30; } },
-  { id:'sixty', name:'Two Months Deep', desc:'60-day streak on any habit', check:function(s,d){ return d.bestStreak>=60; } },
-  { id:'hundred_days', name:'Hundred Days', desc:'100-day streak on any habit', check:function(s,d){ return d.bestStreak>=100; } },
-  { id:'full_orbit', name:'Full Orbit', desc:'365-day streak on any habit', check:function(s,d){ return d.bestStreak>=365; } },
+  { id:'week_strong', coin:50, name:'One Week Strong', desc:'7-day streak on any habit', check:function(s,d){ return d.bestStreak>=7; } },
+  { id:'fortnight', coin:100, name:'Two Week Warrior', desc:'14-day streak on any habit', check:function(s,d){ return d.bestStreak>=14; } },
+  { id:'unstoppable', coin:250, name:'Unstoppable', desc:'30-day streak on any habit', check:function(s,d){ return d.bestStreak>=30; } },
+  { id:'sixty', coin:400, name:'Two Months Deep', desc:'60-day streak on any habit', check:function(s,d){ return d.bestStreak>=60; } },
+  { id:'hundred_days', coin:700, name:'Hundred Days', desc:'100-day streak on any habit', check:function(s,d){ return d.bestStreak>=100; } },
+  { id:'full_orbit', coin:2500, name:'Full Orbit', desc:'365-day streak on any habit', check:function(s,d){ return d.bestStreak>=365; } },
   /* levels */
-  { id:'level5', name:'Level 5', desc:'Reach level 5', check:function(s,d){ return d.level>=5; } },
-  { id:'level10', name:'Level 10', desc:'Reach level 10', check:function(s,d){ return d.level>=10; } },
-  { id:'level20', name:'Level 20', desc:'Reach level 20', check:function(s,d){ return d.level>=20; } },
-  { id:'level30', name:'Level 30', desc:'Reach level 30', check:function(s,d){ return d.level>=30; } },
-  { id:'specialist', name:'Specialist', desc:'Reach level 5 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=5; }); } },
-  { id:'master_one', name:'Master of One', desc:'Reach level 10 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=10; }); } },
-  { id:'well_rounded', name:'Well Rounded', desc:'Reach level 3 in every category', check:function(s,d){ return categoryDerived().every(function(c){ return c.level>=3; }); } },
+  { id:'level5', coin:100, name:'Level 5', desc:'Reach level 5', check:function(s,d){ return d.level>=5; } },
+  { id:'level10', coin:250, name:'Level 10', desc:'Reach level 10', check:function(s,d){ return d.level>=10; } },
+  { id:'level20', coin:600, name:'Level 20', desc:'Reach level 20', check:function(s,d){ return d.level>=20; } },
+  { id:'level30', coin:1500, name:'Level 30', desc:'Reach level 30', check:function(s,d){ return d.level>=30; } },
+  { id:'specialist', coin:100, name:'Specialist', desc:'Reach level 5 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=5; }); } },
+  { id:'master_one', coin:300, name:'Master of One', desc:'Reach level 10 in any category', check:function(s,d){ return categoryDerived().some(function(c){ return c.level>=10; }); } },
+  { id:'well_rounded', coin:200, name:'Well Rounded', desc:'Reach level 3 in every category', check:function(s,d){ return categoryDerived().every(function(c){ return c.level>=3; }); } },
   /* tasks */
-  { id:'off_the_list', name:'Off the List', desc:'Complete your first task', check:function(s,d){ return d.tasksCompleted>=1; } },
-  { id:'task_master', name:'Task Master', desc:'Complete 25 tasks', check:function(s,d){ return d.tasksCompleted>=25; } },
-  { id:'task_machine', name:'Task Machine', desc:'Complete 100 tasks', check:function(s,d){ return d.tasksCompleted>=100; } },
+  { id:'off_the_list', coin:20, name:'Off the List', desc:'Complete your first task', check:function(s,d){ return d.tasksCompleted>=1; } },
+  { id:'task_master', coin:150, name:'Task Master', desc:'Complete 25 tasks', check:function(s,d){ return d.tasksCompleted>=25; } },
+  { id:'task_machine', coin:400, name:'Task Machine', desc:'Complete 100 tasks', check:function(s,d){ return d.tasksCompleted>=100; } },
   /* challenges & wheel */
-  { id:'warm_up', name:'Warm-up', desc:'Finish your first challenge', check:function(s,d){ return d.challengesDone>=1; } },
-  { id:'challenger', name:'Challenger', desc:'Finish 25 challenges', check:function(s,d){ return d.challengesDone>=25; } },
-  { id:'challenge_addict', name:'Challenge Addict', desc:'Finish 100 challenges', check:function(s,d){ return d.challengesDone>=100; } },
-  { id:'first_spin', name:'First Spin', desc:'Claim your first wheel prize', check:function(s,d){ return d.wheelsDone>=1; } },
-  { id:'wheel_regular', name:'Wheel Regular', desc:'Claim 7 wheel prizes', check:function(s,d){ return d.wheelsDone>=7; } },
-  { id:'wheel_veteran', name:'Wheel Veteran', desc:'Claim 30 wheel prizes', check:function(s,d){ return d.wheelsDone>=30; } },
+  { id:'warm_up', coin:20, name:'Warm-up', desc:'Finish your first challenge', check:function(s,d){ return d.challengesDone>=1; } },
+  { id:'challenger', coin:150, name:'Challenger', desc:'Finish 25 challenges', check:function(s,d){ return d.challengesDone>=25; } },
+  { id:'challenge_addict', coin:400, name:'Challenge Addict', desc:'Finish 100 challenges', check:function(s,d){ return d.challengesDone>=100; } },
+  { id:'first_spin', coin:20, name:'First Spin', desc:'Claim your first wheel prize', check:function(s,d){ return d.wheelsDone>=1; } },
+  { id:'wheel_regular', coin:100, name:'Wheel Regular', desc:'Claim 7 wheel prizes', check:function(s,d){ return d.wheelsDone>=7; } },
+  { id:'wheel_veteran', coin:300, name:'Wheel Veteran', desc:'Claim 30 wheel prizes', check:function(s,d){ return d.wheelsDone>=30; } },
   /* luck */
-  { id:'lucky_break', name:'Lucky Break', desc:'Hit your first lucky bonus', check:function(s,d){ return (s.luckyBonusCount||0)>=1; } },
-  { id:'four_leaf', name:'Four-Leaf Clover', desc:'Hit 10 lucky bonuses', check:function(s,d){ return (s.luckyBonusCount||0)>=10; } },
-  { id:'jackpot', name:'Jackpot Season', desc:'Hit 50 lucky bonuses', check:function(s,d){ return (s.luckyBonusCount||0)>=50; } },
+  { id:'lucky_break', coin:30, name:'Lucky Break', desc:'Hit your first lucky bonus', check:function(s,d){ return (s.luckyBonusCount||0)>=1; } },
+  { id:'four_leaf', coin:150, name:'Four-Leaf Clover', desc:'Hit 10 lucky bonuses', check:function(s,d){ return (s.luckyBonusCount||0)>=10; } },
+  { id:'jackpot', coin:500, name:'Jackpot Season', desc:'Hit 50 lucky bonuses', check:function(s,d){ return (s.luckyBonusCount||0)>=50; } },
   /* coins */
-  { id:'piggy_bank', name:'Piggy Bank', desc:'Hold $10 in your wallet', check:function(s,d){ return s.wallet.cents>=1000; } },
-  { id:'stash', name:'Stash', desc:'Hold $50 in your wallet', check:function(s,d){ return s.wallet.cents>=5000; } },
-  { id:'vault', name:'Full Vault', desc:'Fill your wallet to its max', check:function(s,d){ return s.settings.coinCapCents>0 && s.wallet.cents>=s.settings.coinCapCents-0.5; } },
-  { id:'treat_yourself', name:'Treat Yourself', desc:'Spend coins for the first time', check:function(s,d){ return (s.wallet.spent||[]).length>=1; } },
+  { id:'piggy_bank', coin:30, name:'Piggy Bank', desc:'Hold $10 in your wallet', check:function(s,d){ return s.wallet.cents>=1000; } },
+  { id:'stash', coin:60, name:'Stash', desc:'Hold $50 in your wallet', check:function(s,d){ return s.wallet.cents>=5000; } },
+  { id:'vault', coin:0, name:'Full Vault', desc:'Fill your wallet to its max', check:function(s,d){ return s.settings.coinCapCents>0 && s.wallet.cents>=s.settings.coinCapCents-0.5; } },
+  { id:'treat_yourself', coin:20, name:'Treat Yourself', desc:'Spend coins for the first time', check:function(s,d){ return (s.wallet.spent||[]).length>=1; } },
   /* boost */
-  { id:'boost_5', name:'Warming Up', desc:'Reach a +5% coin boost', check:function(s,d){ return boostPercent()>=5; } },
-  { id:'boost_25', name:'On a Roll', desc:'Reach a +25% coin boost', check:function(s,d){ return boostPercent()>=25; } },
-  { id:'boost_50', name:'Compounding', desc:'Reach a +50% coin boost', check:function(s,d){ return boostPercent()>=50; } },
-  { id:'boost_max', name:'Maxed Out', desc:'Hit your maximum coin boost', check:function(s,d){ var c=(s.settings.boostCap===undefined?DEFAULT_BOOST_CAP:s.settings.boostCap); return c>0 && boostPercent()>=c; } }
+  { id:'boost_5', coin:50, name:'Warming Up', desc:'Reach a +5% coin boost', check:function(s,d){ return boostPercent()>=5; } },
+  { id:'boost_25', coin:150, name:'On a Roll', desc:'Reach a +25% coin boost', check:function(s,d){ return boostPercent()>=25; } },
+  { id:'boost_50', coin:300, name:'Compounding', desc:'Reach a +50% coin boost', check:function(s,d){ return boostPercent()>=50; } },
+  { id:'boost_max', coin:600, name:'Maxed Out', desc:'Hit your maximum coin boost', check:function(s,d){ var c=(s.settings.boostCap===undefined?DEFAULT_BOOST_CAP:s.settings.boostCap); return c>0 && boostPercent()>=c; } }
 ];
 
 /* =====================================================================
@@ -492,7 +492,7 @@ function defaultState(){
     ],
     purchases:[],
     topups:[],
-    challenges:DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1], limit:0 }; }),
+    challenges:DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1], tier:nearestTier(c[1]), limit:3 }; }),
     challengeLogs:[],
     wheel:null,
     wheelLog:[],
@@ -813,18 +813,32 @@ function emergencyMinutesRemainingThisWeek(){
 /* =====================================================================
    ACHIEVEMENTS
    ===================================================================== */
+var ACH_COIN={}; ACHIEVEMENTS.forEach(function(a){ ACH_COIN[a.id]=a.coin||0; });
+function grantRetroAchievementCoins(){
+  if(state.achCoinsGranted) return 0;
+  state.achCoinsGranted=true;
+  var total=0;
+  (state.achievements||[]).forEach(function(u){
+    if(u.coins===undefined && ACH_COIN[u.id]!==undefined){ u.coins=awardBonusCoins(ACH_COIN[u.id]); total+=u.coins; }
+  });
+  return total;
+}
 function checkAchievements(){
+  var retro=grantRetroAchievementCoins();
+  if(retro>0) queueToast('Achievement bonus: +'+fmtMoney(retro)+' for achievements you already earned');
   var d=computeDerived();
   var unlockedIds=(state.achievements||[]).map(function(a){ return a.id; });
   var newlyUnlocked=[];
   ACHIEVEMENTS.forEach(function(a){
     if(unlockedIds.indexOf(a.id)===-1 && a.check(state,d)){
-      state.achievements.push({ id:a.id, unlockedAt:todayKey() });
-      newlyUnlocked.push(a);
+      var got=awardBonusCoins(a.coin||0);
+      state.achievements.push({ id:a.id, unlockedAt:todayKey(), coins:got });
+      newlyUnlocked.push({ name:a.name, coins:got });
     }
   });
   if(newlyUnlocked.length){
-    queueToast('Achievement unlocked: '+newlyUnlocked[0].name);
+    var sum=newlyUnlocked.reduce(function(n,x){ return n+x.coins; },0);
+    queueToast('Achievement unlocked: '+newlyUnlocked[0].name+(newlyUnlocked.length>1?' +'+(newlyUnlocked.length-1)+' more':'')+(sum?' \u00b7 +'+fmtMoney(sum):''));
   }
   return newlyUnlocked;
 }
@@ -847,6 +861,19 @@ function queueLevelUpToast(level){
 
 function validTier(d){ return TIERS.some(function(t){ return t.id===d; }); }
 function tierInfo(id){ return TIERS.filter(function(t){ return t.id===id; })[0]||TIERS[2]; }
+function tierPts(id){ var p=state.settings.difficultyPoints; return (p&&p[id])||tierInfo(id).pts; }
+function nearestTier(pts){
+  var best=TIERS[1], d=1e9;
+  TIERS.forEach(function(t){ var x=Math.abs(t.pts-(pts||0)); if(x<d){ d=x; best=t; } });
+  return best.id;
+}
+function taskXp(task){ return task.done?(task.pointsAwarded||0):tierPts(task.tier||nearestTier(task.points)); }
+function luckyRoll(id,dk){
+  var s=id+'|'+dk, h=2166136261;
+  for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  h^=h>>>13; h=Math.imul(h,0x5bd1e995); h^=h>>>15;
+  return (h>>>0)/4294967296;
+}
 function tierSelectHtml(id,name,sel){
   var h='<select id="'+id+'" name="'+name+'">';
   TIERS.forEach(function(t){ h+='<option value="'+t.id+'" '+(t.id===sel?'selected':'')+'>'+t.label+' \u00b7 '+((state.settings.difficultyPoints&&state.settings.difficultyPoints[t.id])||t.pts)+' xp</option>'; });
@@ -854,7 +881,7 @@ function tierSelectHtml(id,name,sel){
 }
 function coinTierFieldsHtml(){
   var h='<fieldset><legend>Coins per check-in (cents)</legend><div class="field-row" style="flex-wrap:wrap;">';
-  TIERS.forEach(function(t){ h+='<div class="field" style="flex:1 1 30%;"><label for="sc-'+t.id+'">'+t.label+'</label><input type="number" id="sc-'+t.id+'" name="coin_'+t.id+'" value="'+tierCoin(t.id)+'" min="0" step="0.5"></div>'; });
+  TIERS.forEach(function(t){ h+='<div class="field" style="flex:1 1 30%;"><label for="sc-'+t.id+'">'+t.label+'</label><input type="number" id="sc-'+t.id+'" name="coin_'+t.id+'" value="'+tierCoin(t.id)+'" min="0" step="1" inputmode="numeric"></div>'; });
   return h+'</div></fieldset>';
 }
 function tierFieldsHtml(){
@@ -864,7 +891,7 @@ function tierFieldsHtml(){
 }
 
 /* ---- coins (cents internally, shown as $) ---- */
-function fmtMoney(c){ return '$'+(c/100).toFixed(2); }
+function fmtMoney(c){ return (c<0?'-':'')+'$'+(Math.abs(c)/100).toFixed(2); }
 function r2(x){ return Math.round(x*100)/100; }
 function coinRoom(dateKey){
   return Math.max(0,state.settings.coinCapCents-state.wallet.cents);
@@ -873,16 +900,27 @@ function tierCoin(id){
   var tc=state.settings.tierCoins;
   return (tc && tc[id]!==undefined)?tc[id]:tierInfo(id).coin;
 }
+function awardBonusCoins(cents){
+  var a=Math.min(Math.round(cents),coinRoom());
+  if(a<=0) return 0;
+  var w=state.wallet, t=todayKey();
+  w.cents=Math.round(w.cents+a); w.daily[t]=Math.round((w.daily[t]||0)+a);
+  return a;
+}
 function awardCoins(cents,dateKey){
   if(cents<=0 || dateKey!==todayKey()) return 0;
-  var a=Math.min(r2(cents*(1+boostPercent()/100)),coinRoom(dateKey));
-  if(a<=0) return 0;
-  var w=state.wallet; w.cents=r2(w.cents+a); w.daily[dateKey]=r2((w.daily[dateKey]||0)+a);
+  var w=state.wallet;
+  var exact=cents*(1+boostPercent()/100)+(w.carry||0);
+  var whole=Math.floor(exact+1e-9);
+  var a=Math.min(whole,coinRoom(dateKey));
+  if(a<=0){ w.carry=Math.max(0,exact-whole); return 0; }
+  w.carry=(a<whole)?0:Math.max(0,exact-whole); /* leftover fraction of a cent rolls into the next award */
+  w.cents=Math.round(w.cents+a); w.daily[dateKey]=Math.round((w.daily[dateKey]||0)+a);
   return a;
 }
 function revokeCoins(a,dateKey){
   if(!a) return;
-  var w=state.wallet; w.cents=Math.max(0,r2(w.cents-a)); w.daily[dateKey]=Math.max(0,r2((w.daily[dateKey]||0)-a));
+  var w=state.wallet; w.cents=r2(w.cents-a); w.daily[dateKey]=Math.max(0,r2((w.daily[dateKey]||0)-a)); /* may go negative: undoing earned coins after spending them leaves a debt */
 }
 function spendCoins(cents){
   if(!(cents>0) || cents>state.wallet.cents+0.001){ queueToast('Not enough coins for that'); render(); return; }
@@ -911,16 +949,17 @@ function extraPointsOn(dk){
 }
 
 /* ---- repeatable challenges ---- */
-function addChallenge(name,points,limit){
+function addChallenge(name,tier,limit){
   name=(name||'').trim(); if(!name) return;
-  state.challenges.push({ id:uid(), name:name.slice(0,60), points:clampInt(points,1,500,5), limit:clampInt(limit,0,99,0) });
+  if(!validTier(tier)) tier='easy';
+  state.challenges.push({ id:uid(), name:name.slice(0,60), tier:tier, points:tierPts(tier), limit:clampInt(limit,0,99,0) });
   ui.showAddChallenge=false; persist(); render();
 }
-function editChallenge(id,name,points,limit){
+function editChallenge(id,name,tier,limit){
   var c=state.challenges.filter(function(x){ return x.id===id; })[0];
   name=(name||'').trim();
   if(!c || !name) return;
-  c.name=name.slice(0,60); c.points=clampInt(points,1,500,c.points); c.limit=clampInt(limit,0,99,0);
+  c.name=name.slice(0,60); if(validTier(tier)) c.tier=tier; c.points=tierPts(c.tier); c.limit=clampInt(limit,0,99,0);
   ui.editingChallengeId=null; persist(); render();
 }
 function moveChallenge(id,dir){
@@ -941,12 +980,13 @@ function logChallenge(id){
   if(!c) return;
   if(c.limit>0 && challengeCountToday(id)>=c.limit){ queueToast('Daily limit reached for this challenge'); render(); return; }
   var lb=computeDerived().level, t=todayKey();
-  var coins=awardCoins(Math.round(c.points/4),t);
-  state.challengeLogs.push({ id:uid(), challengeId:id, name:c.name, points:c.points, coins:coins, dateKey:t });
-  checkAchievements();
+  var cpts=tierPts(c.tier||nearestTier(c.points));
+  var coins=awardCoins(tierCoin(c.tier||nearestTier(c.points)),t);
+  state.challengeLogs.push({ id:uid(), challengeId:id, name:c.name, points:cpts, coins:coins, dateKey:t });
+  var newAch=checkAchievements();
   var la=computeDerived().level;
   buzz(15);
-  if(la>lb) queueLevelUpToast(la); else queueToast('+'+c.points+' xp'+(coins?' \u00b7 +'+fmtMoney(coins):''));
+  if(la>lb) queueLevelUpToast(la); else if(!newAch.length) queueToast('+'+cpts+' xp'+(coins?' \u00b7 +'+fmtMoney(coins):''));
   persist(); render();
 }
 function undoChallenge(id){
@@ -984,9 +1024,9 @@ function claimWheel(){
   var coins=awardCoins(w.coins,todayKey());
   w.status='done';
   state.wheelLog.push({ id:uid(), dateKey:todayKey(), name:w.mission, points:w.points, coins:coins });
-  checkAchievements();
+  var newAch=checkAchievements();
   var la=computeDerived().level;
-  if(la>lb) queueLevelUpToast(la); else queueToast('Wheel prize! +'+w.points+' xp'+(coins?' \u00b7 +'+fmtMoney(coins):''));
+  if(la>lb) queueLevelUpToast(la); else if(!newAch.length) queueToast('Wheel prize! +'+w.points+' xp'+(coins?' \u00b7 +'+fmtMoney(coins):''));
   persist(); render();
 }
 function wheelSvg(){
@@ -1040,16 +1080,19 @@ function toggleHabitDay(habitId,dateKey){
   if(habit.completions.hasOwnProperty(dateKey)){
     if(!habit.coins) habit.coins={};
     revokeCoins(habit.coins[dateKey]||0,dateKey); delete habit.coins[dateKey];
+    if(habit.lucky && habit.lucky[dateKey]){ delete habit.lucky[dateKey]; state.luckyBonusCount=Math.max(0,(state.luckyBonusCount||0)-1); }
     delete habit.completions[dateKey];
   } else {
     var streak=streakEndingAt(habit,dateKey);
     var mult=streakMultiplier(streak);
     var base=(state.settings.difficultyPoints[habit.difficulty])||DIFFICULTY_POINTS[habit.difficulty]||10;
     var pts=Math.round(base*mult);
-    if(Math.random()<LUCKY_CHANCE){
+    if(luckyRoll(habit.id,dateKey)<LUCKY_CHANCE){
       bonus=Math.max(1,Math.round(base*LUCKY_BONUS_FRACTION));
       pts+=bonus;
       lucky=true;
+      if(!habit.lucky) habit.lucky={};
+      habit.lucky[dateKey]=bonus;
       state.luckyBonusCount=(state.luckyBonusCount||0)+1;
     }
     habit.completions[dateKey]=pts;
@@ -1058,9 +1101,10 @@ function toggleHabitDay(habitId,dateKey){
     if(!habit.coins) habit.coins={};
     habit.coins[dateKey]=coinGot;
   }
-  checkAchievements();
+  var newAch=checkAchievements();
   var levelAfter=computeDerived().level;
   if(levelAfter>levelBefore) queueLevelUpToast(levelAfter);
+  else if(newAch.length){ /* keep the achievement toast */ }
   else if(lucky) queueToast('\u2728 Lucky bonus! +'+bonus+' xp on '+habit.name+(coinGot?' \u00b7 +'+fmtMoney(coinGot):''));
   else if(coinGot) queueToast('+'+fmtMoney(coinGot));
   persist(); render();
@@ -1123,11 +1167,12 @@ function moveHabit(habitId,dir){
 /* =====================================================================
    ACTIONS — TASKS
    ===================================================================== */
-function addTask(name,points,deadline){
+function addTask(name,tier,deadline){
   name=(name||'').trim();
   if(!name) return;
-  points=clampInt(points,1,500,10);
-  state.tasks.push({ id:uid(), name:name.slice(0,80), points:points, deadline:deadline||null, done:false, createdAt:todayKey(), completedAt:null, pointsAwarded:0 });
+  if(!validTier(tier)) tier='easy';
+  var points=tierPts(tier);
+  state.tasks.push({ id:uid(), name:name.slice(0,80), tier:tier, points:points, deadline:deadline||null, done:false, createdAt:todayKey(), completedAt:null, pointsAwarded:0 });
   ui.showAddTask=false;
   persist(); render();
 }
@@ -1139,8 +1184,10 @@ function toggleTask(taskId){
     revokeCoins(task.coinsAwarded||0,task.completedAt); task.coinsAwarded=0;
     task.done=false; task.completedAt=null; task.pointsAwarded=0;
   } else {
+    if(!validTier(task.tier)) task.tier=nearestTier(task.points);
+    task.points=tierPts(task.tier);
     task.done=true; task.completedAt=todayKey(); task.pointsAwarded=task.points;
-    task.coinsAwarded=awardCoins(Math.round(task.points/4),task.completedAt);
+    task.coinsAwarded=awardCoins(tierCoin(task.tier),task.completedAt);
     ui.pop='t|'+task.id; buzz(18);
   }
   checkAchievements();
@@ -1153,15 +1200,14 @@ function deleteTask(taskId){
   ui.pendingDeleteKind=null; ui.pendingDeleteId=null;
   persist(); render();
 }
-function editTask(taskId,name,points,deadline){
+function editTask(taskId,name,tier,deadline){
   var task=(state.tasks||[]).filter(function(t){ return t.id===taskId; })[0];
   if(!task) return;
   name=(name||'').trim();
   if(!name) return;
   task.name=name.slice(0,80);
-  task.points=clampInt(points,1,500,task.points);
+  if(!task.done){ if(validTier(tier)) task.tier=tier; task.points=tierPts(task.tier); }
   task.deadline=deadline||null;
-  if(task.done) task.pointsAwarded=task.points;
   ui.editingTaskId=null;
   persist(); render();
 }
@@ -1290,7 +1336,7 @@ function applySettingsFields(fields){
   if(fields.boostCap!==undefined) state.settings.boostCap=clampInt(fields.boostCap,0,1000,DEFAULT_BOOST_CAP);
   TIERS.forEach(function(t){
     var k='coin_'+t.id;
-    if(fields[k]!==undefined){ var v=parseFloat(fields[k]); state.settings.tierCoins[t.id]=isNaN(v)?t.coin:Math.max(0,r2(v)); }
+    if(fields[k]!==undefined){ var v=parseFloat(fields[k]); state.settings.tierCoins[t.id]=isNaN(v)?t.coin:Math.max(0,Math.round(v)); }
   });
   if(state.wallet.cents>state.settings.coinCapCents) state.wallet.cents=state.settings.coinCapCents;
   persist(); render();
@@ -1302,7 +1348,7 @@ function sanitizeSettingFields(f){
   TIERS.forEach(function(t){
     if(f[t.id]!==undefined) o[t.id]=clampInt(f[t.id],1,10000,state.settings.difficultyPoints[t.id]);
     var k='coin_'+t.id;
-    if(f[k]!==undefined){ var v=parseFloat(f[k]); o[k]=isNaN(v)?tierCoin(t.id):Math.max(0,r2(v)); }
+    if(f[k]!==undefined){ var v=parseFloat(f[k]); o[k]=isNaN(v)?tierCoin(t.id):Math.max(0,Math.round(v)); }
   });
   if(f.coinCap!==undefined) o.coinCap=Math.max(0,r2(parseFloat(f.coinCap)||0));
   if(f.boostCap!==undefined) o.boostCap=clampInt(f.boostCap,0,1000,state.settings.boostCap);
@@ -1443,8 +1489,9 @@ function normalizeState(s){
   if(s.settings.pinHash===undefined) s.settings.pinHash=null;
   if(s.settings.pending===undefined) s.settings.pending=null;
   if(!s.settings.tierCoins) s.settings.tierCoins={};
-  if(!s.challenges) s.challenges=DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1], limit:0 }; });
-  s.challenges.forEach(function(c){ if(c.limit===undefined) c.limit=0; });
+  if(!s.challenges) s.challenges=DEFAULT_CHALLENGES.map(function(c){ return { id:uid(), name:c[0], points:c[1], tier:nearestTier(c[1]), limit:3 }; });
+  s.challenges.forEach(function(c){ if(c.limit===undefined) c.limit=0; if(!validTier(c.tier)) c.tier=nearestTier(c.points); });
+  (s.tasks||[]).forEach(function(t){ if(!validTier(t.tier)) t.tier=nearestTier(t.points); });
   if(!s.challengeLogs) s.challengeLogs=[];
   if(!s.wheelLog) s.wheelLog=[];
   if(s.wheel===undefined) s.wheel=null;
@@ -1608,7 +1655,7 @@ function renderToday(glance){
     openTasks.forEach(function(task){
       tasksInner+='<div class="row-between">'+
         '<div class="row"><button class="check-circle'+(ui.pop==='t|'+task.id?' pop':'')+'" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><div><div>'+esc(task.name)+'</div>'+dueHtml(task)+'</div></div>'+
-        '<span class="faint c-gold">+'+task.points+'</span>'+
+        '<span class="faint c-gold">+'+taskXp(task)+'</span>'+
       '</div>';
     });
     tasksInner+='</div>';
@@ -1657,7 +1704,7 @@ function renderChallengesTab(){
       if(ui.editingChallengeId===c.id){
         inner+='<div class="edit-panel"><form data-form="edit-challenge" class="stack"><input type="hidden" name="id" value="'+c.id+'">'+
           '<div class="field"><label for="ec-name-'+c.id+'">Challenge</label><input type="text" id="ec-name-'+c.id+'" name="name" value="'+esc(c.name)+'" maxlength="60" required></div>'+
-          '<div class="field-row"><div class="field"><label for="ec-pts-'+c.id+'">XP each</label><input type="number" id="ec-pts-'+c.id+'" name="points" value="'+c.points+'" min="1" max="500"></div>'+
+          '<div class="field-row"><div class="field"><label for="ec-tier-'+c.id+'">Reward</label>'+tierSelectHtml('ec-tier-'+c.id,'tier',c.tier)+'</div>'+
           '<div class="field"><label for="ec-lim-'+c.id+'">Max per day (0 = no limit)</label><input type="number" id="ec-lim-'+c.id+'" name="limit" value="'+(c.limit||0)+'" min="0" max="99"></div></div>'+
           '<div class="row"><button type="submit" class="btn btn-sage">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-challenge">Cancel</button></div></form></div>';
         return;
@@ -1667,7 +1714,7 @@ function renderChallengesTab(){
         return;
       }
       inner+='<div class="chal-row"><div style="min-width:0;"><div>'+esc(c.name)+'</div>'+
-        '<div class="chal-meta"><span class="chip chip-gold">+'+c.points+' xp</span><span class="chip">today '+n+(c.limit>0?' / '+c.limit:'')+'</span><span class="chip">all time '+total+'</span></div>'+
+        '<div class="chal-meta"><span class="chip chip-gold">+'+tierPts(c.tier)+' xp</span><span class="chip">today '+n+(c.limit>0?' / '+c.limit:'')+'</span><span class="chip">all time '+total+'</span></div>'+
         '<div class="row" style="margin-top:8px;"><button class="icon-btn" data-action="edit-challenge" data-id="'+c.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="challenge" data-id="'+c.id+'">Remove</button>'+
         '<div class="reorder-col"><button class="reorder-btn" data-action="move-challenge-up" data-id="'+c.id+'" '+(idx===0?'disabled':'')+' aria-label="Move up">&#9650;</button><button class="reorder-btn" data-action="move-challenge-down" data-id="'+c.id+'" '+(idx===state.challenges.length-1?'disabled':'')+' aria-label="Move down">&#9660;</button></div></div></div>'+
         '<div class="row">'+(n>0?'<button class="btn btn-ghost btn-sm" data-action="undo-challenge" data-id="'+c.id+'">Undo</button>':'')+
@@ -1678,8 +1725,8 @@ function renderChallengesTab(){
   inner+='<div class="divider"></div>';
   if(ui.showAddChallenge){
     inner+='<form data-form="add-challenge" class="stack"><div class="field"><label for="ch-name">Challenge</label><input type="text" id="ch-name" name="name" placeholder="e.g. Take a walk \u2014 1 km" maxlength="60" required autofocus></div>'+
-      '<div class="field-row"><div class="field"><label for="ch-pts">XP each</label><input type="number" id="ch-pts" name="points" value="5" min="1" max="500"></div>'+
-      '<div class="field"><label for="ch-lim">Max per day (0 = no limit)</label><input type="number" id="ch-lim" name="limit" value="0" min="0" max="99"></div></div>'+
+      '<div class="field-row"><div class="field"><label for="ch-tier">Reward</label>'+tierSelectHtml('ch-tier','tier','easy')+'</div>'+
+      '<div class="field"><label for="ch-lim">Max per day (0 = no limit)</label><input type="number" id="ch-lim" name="limit" value="3" min="0" max="99"></div></div>'+
       '<div class="row"><button type="submit" class="btn btn-sage">Add challenge</button><button type="button" class="btn btn-ghost" data-action="cancel-add-challenge">Cancel</button></div></form>';
   } else inner+='<button class="btn btn-sage btn-block" data-action="show-add-challenge">+ Add a challenge</button>';
   html+=card(null,inner);
@@ -1690,8 +1737,8 @@ function renderWallet(){
   var w=state.wallet, cap=state.settings.coinCapCents, day=w.daily[todayKey()]||0, boost=boostPercent();
   var bcap=state.settings.boostCap;
   var inner='<div class="row-between" style="align-items:flex-end;margin-bottom:8px;"><div><span class="eyebrow" style="margin-bottom:2px;">Balance</span><span class="big-num c-gold"><i class="coin"></i>'+fmtMoney(w.cents)+'</span></div><span class="faint">max '+fmtMoney(cap)+'</span></div>'+
-    meter(w.cents,cap,'var(--gold)')+
-    '<div class="faint" style="margin:8px 0 14px;">Earned today '+fmtMoney(day)+(w.cents>=cap-0.5?' \u00b7 wallet full \u2014 spend some!':'')+'</div>'+
+    meter(Math.max(0,w.cents),cap,'var(--gold)')+
+    '<div class="faint" style="margin:8px 0 14px;">Earned today '+fmtMoney(day)+(w.cents>=cap-0.5?' \u00b7 wallet full \u2014 spend some!':'')+(w.cents<0?' \u00b7 negative balance: you undid check-ins after spending those coins, new earnings pay it off':'')+'</div>'+
     '<form data-form="spend-coins"><div class="spend-row"><div class="field"><label for="sp-amt">Amount spent ($)</label><input type="number" id="sp-amt" name="amount" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" required></div><button type="submit" class="btn btn-peri">Spend</button></div></form>';
   var html=card('Real-world coins',inner);
 
@@ -1865,7 +1912,7 @@ function renderTasks(){
     addInner='<form data-form="add-task" class="stack">'+
       '<div class="field"><label for="task-name">Task</label><input type="text" id="task-name" name="name" placeholder="e.g. Send that email" maxlength="80" required></div>'+
       '<div class="field-row">'+
-        '<div class="field"><label for="task-points">Points</label><input type="number" id="task-points" name="points" value="10" min="1" max="500"></div>'+
+        '<div class="field"><label for="task-tier">Reward</label>'+tierSelectHtml('task-tier','tier','easy')+'</div>'+
         '<div class="field"><label for="task-deadline">Deadline (optional)</label><input type="date" id="task-deadline" name="deadline"></div>'+
       '</div>'+
       '<div class="row"><button type="submit" class="btn btn-sage">Add task</button><button type="button" class="btn btn-ghost" data-action="cancel-add-task">Cancel</button></div>'+
@@ -1891,7 +1938,7 @@ function renderTasks(){
           '<input type="hidden" name="id" value="'+task.id+'">'+
           '<div class="field"><label for="et-name-'+task.id+'">Task</label><input type="text" id="et-name-'+task.id+'" name="name" value="'+esc(task.name)+'" maxlength="80" required></div>'+
           '<div class="field-row">'+
-            '<div class="field"><label for="et-points-'+task.id+'">Points</label><input type="number" id="et-points-'+task.id+'" name="points" value="'+task.points+'" min="1" max="500"></div>'+
+            '<div class="field"><label for="et-tier-'+task.id+'">Reward</label>'+tierSelectHtml('et-tier-'+task.id,'tier',task.tier||nearestTier(task.points))+'</div>'+
             '<div class="field"><label for="et-deadline-'+task.id+'">Deadline (optional)</label><input type="date" id="et-deadline-'+task.id+'" name="deadline" value="'+(task.deadline||'')+'"></div>'+
           '</div>'+
           '<div class="row"><button type="submit" class="btn btn-sage">Save</button><button type="button" class="btn btn-ghost" data-action="cancel-edit-task">Cancel</button></div>'+
@@ -1901,7 +1948,7 @@ function renderTasks(){
       } else {
         openInner+='<div class="row-between">'+
           '<div class="row"><button class="check-circle'+(ui.pop==='t|'+task.id?' pop':'')+'" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><div><div>'+esc(task.name)+'</div>'+dueHtml(task)+'</div></div>'+
-          '<div class="row"><span class="faint c-gold">+'+task.points+'</span><button class="icon-btn" data-action="edit-task" data-task="'+task.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="task" data-id="'+task.id+'">Remove</button></div>'+
+          '<div class="row"><span class="faint c-gold">+'+taskXp(task)+'</span><button class="icon-btn" data-action="edit-task" data-task="'+task.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="task" data-id="'+task.id+'">Remove</button></div>'+
         '</div>';
       }
     });
@@ -2040,7 +2087,7 @@ function renderStats(){
   var unlockedIds=(state.achievements||[]).map(function(a){return a.id;});
   ACHIEVEMENTS.forEach(function(a){
     var isUnlocked=unlockedIds.indexOf(a.id)!==-1;
-    achvInner+='<div class="achv'+(isUnlocked?'':' locked')+'"><div class="achv-name">'+a.name+'</div><div class="faint">'+a.desc+'</div></div>';
+    achvInner+='<div class="achv'+(isUnlocked?'':' locked')+'"><div class="achv-name">'+a.name+'</div><div class="faint">'+a.desc+'</div>'+(a.coin?'<div class="faint c-gold" style="margin-top:4px;">'+(isUnlocked?'\u2713 ':'')+'+'+fmtMoney(a.coin)+'</div>':'')+'</div>';
   });
   achvInner+='</div>';
   html+=card(null,achvInner);
@@ -2372,14 +2419,14 @@ function onSubmit(e){
   switch(type){
     case 'add-habit': addHabit(fd.get('name'),fd.get('difficulty'),fd.get('category')); break;
     case 'edit-habit': updateHabit(fd.get('id'),fd.get('name'),fd.get('difficulty'),fd.get('category')); break;
-    case 'add-task': addTask(fd.get('name'),fd.get('points'),fd.get('deadline')); break;
-    case 'edit-task': editTask(fd.get('id'),fd.get('name'),fd.get('points'),fd.get('deadline')); break;
+    case 'add-task': addTask(fd.get('name'),fd.get('tier'),fd.get('deadline')); break;
+    case 'edit-task': editTask(fd.get('id'),fd.get('name'),fd.get('tier'),fd.get('deadline')); break;
     case 'add-shop-item': addShopItem(fd.get('name'),fd.get('cost')); break;
     case 'edit-shop-item': editShopItem(fd.get('id'),fd.get('name'),fd.get('cost')); break;
     case 'pin-submit': submitPin(fd.get('pin'),fd.get('pin2')); break;
     case 'change-pin': changePin(fd.get('pin'),fd.get('pin2')); break;
-    case 'add-challenge': addChallenge(fd.get('name'),fd.get('points'),fd.get('limit')); break;
-    case 'edit-challenge': editChallenge(fd.get('id'),fd.get('name'),fd.get('points'),fd.get('limit')); break;
+    case 'add-challenge': addChallenge(fd.get('name'),fd.get('tier'),fd.get('limit')); break;
+    case 'edit-challenge': editChallenge(fd.get('id'),fd.get('name'),fd.get('tier'),fd.get('limit')); break;
     case 'spend-coins': spendCoins(Math.round(parseFloat(fd.get('amount'))*100)); break;
     case 'start-emergency': startTimer('emergency',fd.get('reason')); break;
     case 'manual-log': logManualSession(fd.get('type'),fd.get('minutes'),fd.get('reason')); break;
