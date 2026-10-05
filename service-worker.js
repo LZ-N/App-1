@@ -9,12 +9,14 @@
   files, and swap them in — no reinstall, no app store, nothing
   for you to do on the tablet except relaunch the app once.
 */
-var CACHE_VERSION = 'ascend-v8';
+var CACHE_VERSION = 'ascend-v9';
 var APP_SHELL = [
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png'
 ];
 
 self.addEventListener('install', function(event){

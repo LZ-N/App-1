@@ -6,6 +6,8 @@
 <title>Ascend — Habit Quest</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#12160F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
@@ -307,6 +309,38 @@
   .spend-row .field{flex:1;margin-bottom:0;}
   .big-num{font-family:var(--font-display);font-size:34px;line-height:1.1;font-variant-numeric:tabular-nums;}
   .chal-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+
+  /* ===== v4 polish ===== */
+  body{background:radial-gradient(900px 420px at 50% -120px,rgba(201,162,39,.13),transparent 70%),var(--bg);background-attachment:fixed;}
+  .hud{background:linear-gradient(160deg,var(--surface-2) 0%,var(--surface) 70%);border-color:rgba(201,162,39,.28);box-shadow:0 10px 30px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.03) inset,0 -40px 60px -50px rgba(201,162,39,.25) inset;}
+  .xp-bar-fill{box-shadow:0 0 12px rgba(224,196,104,.55);}
+  .card{border-radius:14px;background:linear-gradient(180deg,var(--surface) 0%,#181e14 100%);box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 2px 4px rgba(0,0,0,.25),0 12px 28px rgba(0,0,0,.3);}
+  .tabs{border-bottom:none;gap:6px;padding-bottom:8px;backdrop-filter:blur(8px);}
+  .tab-btn{border:1px solid transparent;border-radius:99px;padding:9px 15px;}
+  .tab-btn.active{background:linear-gradient(180deg,var(--surface-3),var(--surface-2));border-color:rgba(201,162,39,.4);color:var(--gold-soft);box-shadow:0 4px 12px rgba(0,0,0,.35);}
+  .btn{border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+  .btn-primary{background:linear-gradient(180deg,var(--gold-soft),var(--gold));box-shadow:0 4px 14px rgba(201,162,39,.35);}
+  .btn-sage{background:linear-gradient(180deg,var(--sage-soft),var(--sage));box-shadow:0 4px 14px rgba(127,168,114,.3);}
+  .btn-ghost{box-shadow:none;}
+  .check-circle{box-shadow:0 2px 6px rgba(0,0,0,.35);}
+  .check-circle.done{background:linear-gradient(180deg,var(--sage-soft),var(--sage));box-shadow:0 0 0 4px rgba(127,168,114,.18),0 4px 12px rgba(127,168,114,.4);}
+  .meter-fill{background-image:linear-gradient(90deg,rgba(255,255,255,.0),rgba(255,255,255,.22));box-shadow:0 0 10px rgba(255,255,255,.12);}
+  .diff-tag{font-weight:600;letter-spacing:.07em;background:rgba(255,255,255,.04);box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .achv{background:var(--bg);box-shadow:0 2px 6px rgba(0,0,0,.25);}
+  .achv:not(.locked){background:linear-gradient(160deg,var(--surface-3),var(--surface));border-color:rgba(201,162,39,.5);box-shadow:0 6px 16px rgba(0,0,0,.35),0 0 18px rgba(201,162,39,.12);}
+  .totals-cell{background:var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  .modal{box-shadow:0 20px 60px rgba(0,0,0,.6);}
+  .toast{box-shadow:0 12px 32px rgba(0,0,0,.55);}
+  .today-head{margin-bottom:12px;padding:0 4px;}
+  .today-date{font-family:var(--font-display);font-size:21px;}
+  .edit-pen{padding:6px 9px;font-size:14px;line-height:1;}
+  .add-circle{width:38px;height:38px;flex:none;border-radius:50%;border:none;cursor:pointer;font-size:24px;line-height:1;color:#0f1a10;background:linear-gradient(180deg,var(--gold-soft),var(--gold));box-shadow:0 4px 12px rgba(201,162,39,.4);display:flex;align-items:center;justify-content:center;touch-action:manipulation;transition:transform .12s;}
+  .add-circle:active{transform:scale(.9);}
+  .add-circle.maxed{background:var(--sage);box-shadow:none;opacity:.7;cursor:default;}
+  .add-circle svg{width:18px;height:18px;}
+  .arch-day{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--gold-soft);margin:14px 0 6px;}
+  .arch-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin-bottom:6px;background:var(--bg);border:1px solid var(--border-soft);border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+  @media (display-mode:standalone){#app{padding-top:max(26px,env(safe-area-inset-top));}}
 </style>
 </head>
 <body>
@@ -332,8 +366,8 @@ var DIFFICULTY_POINTS = {}; TIERS.forEach(function(t){ DIFFICULTY_POINTS[t.id]=t
 var DEFAULT_COIN_CAP = 10000, DEFAULT_DAILY_COIN_CAP = 0; /* cents; daily cap removed (0 = none) */
 var BOOST_STREAK_DAYS = 14, BOOST_PER_BLOCK = 1, DEFAULT_BOOST_CAP = 100; /* +1% coins per 14-day streak block, per habit, max +100% */
 var WHEEL_MISSIONS = [
-  ['Stretch for 20 minutes',20,15],['Read 1 chapter of a book',20,15],['Go for a run or jog',30,30],
-  ['Take a 30-minute walk',25,15],['Do 20 push-ups (any sets)',20,15],['Tidy your desk or room for 10 minutes',15,0],
+  ['Stretch for 20 minutes',20,15],['Read 1 chapter of a book',20,15],['Run or jog 3 km',30,30],
+  ['Walk 2 km',25,15],['Do 20 push-ups (any sets)',20,15],['Tidy your desk or room for 10 minutes',15,0],
   ['Drink 2 litres of water today',15,0],['Meditate for 10 minutes',20,15],['Cook a proper meal from scratch',25,30],
   ['Call or message a friend or family',15,0],['Take a cold shower',20,15],['Write a page in a journal',15,0],
   ['Declutter one drawer or shelf',20,15],['No phone for the first hour after waking',25,15],
@@ -402,6 +436,82 @@ var ACHIEVEMENTS = [
   { id:'boost_50', coin:300, name:'Compounding', desc:'Reach a +50% coin boost', check:function(s,d){ return boostPercent()>=50; } },
   { id:'boost_max', coin:600, name:'Maxed Out', desc:'Hit your maximum coin boost', check:function(s,d){ var c=(s.settings.boostCap===undefined?DEFAULT_BOOST_CAP:s.settings.boostCap); return c>0 && boostPercent()>=c; } }
 ];
+
+/* ---- extra achievements + helpers ---- */
+function activeDaysCount(){
+  var set={};
+  (state.habits||[]).forEach(function(h){ Object.keys(h.completions||{}).forEach(function(k){ set[k]=1; }); });
+  (state.tasks||[]).forEach(function(t){ if(t.done&&t.completedAt) set[t.completedAt]=1; });
+  (state.challengeLogs||[]).forEach(function(l){ set[l.dateKey]=1; });
+  (state.wheelLog||[]).forEach(function(l){ set[l.dateKey]=1; });
+  return Object.keys(set).length;
+}
+function perfectDaysCount(){
+  var hs=(state.habits||[]).filter(function(h){ return !h.archived; });
+  if(hs.length<3) return 0;
+  var start=hs.map(function(h){ return h.createdAt; }).sort()[0], t=todayKey(), n=0, k=start, g=0;
+  while(compareKeys(k,t)<=0 && g<4000){
+    var el=hs.filter(function(h){ return compareKeys(h.createdAt,k)<=0; });
+    if(el.length>=3 && el.every(function(h){ return h.completions.hasOwnProperty(k); })) n++;
+    k=addDaysKey(k,1); g++;
+  }
+  return n;
+}
+function lifetimeEarnedCents(){ var n=0; Object.keys(state.wallet.daily||{}).forEach(function(k){ n+=state.wallet.daily[k]; }); return n; }
+function totalSpentCents(){ return (state.wallet.spent||[]).reduce(function(n,x){ return n+x.cents; },0); }
+function tasksOnTime(){ return (state.tasks||[]).filter(function(t){ return t.done&&t.deadline&&t.completedAt&&compareKeys(t.completedAt,t.deadline)<=0; }).length; }
+function tierRank(id){ for(var i=0;i<TIERS.length;i++) if(TIERS[i].id===id) return i; return 1; }
+function doneTaskTier(minRank){ return (state.tasks||[]).some(function(t){ return t.done && tierRank(t.tier)>=minRank; }); }
+function chalDayStats(){
+  var by={}, best=0, bestKinds=0;
+  (state.challengeLogs||[]).forEach(function(l){ var o=by[l.dateKey]||(by[l.dateKey]={n:0,k:{}}); o.n++; o.k[l.challengeId]=1; });
+  Object.keys(by).forEach(function(k){ best=Math.max(best,by[k].n); bestKinds=Math.max(bestKinds,Object.keys(by[k].k).length); });
+  return {best:best,kinds:bestKinds};
+}
+[
+ ['habit_5',50,'Habit Builder','Track 5 active habits',function(s,d){ return s.habits.filter(function(h){return !h.archived;}).length>=5; }],
+ ['checkins_2500',1500,'Habit Machine','2,500 habit check-ins',function(s,d){ return d.totalCompletions>=2500; }],
+ ['streak_21',150,'Habit Formed','21-day streak on any habit',function(s,d){ return d.bestStreak>=21; }],
+ ['streak_180',1000,'Half a Year','180-day streak on any habit',function(s,d){ return d.bestStreak>=180; }],
+ ['perfect_5',150,'Flawless Five','5 perfect days (3+ habits)',function(s,d){ return perfectDaysCount()>=5; }],
+ ['perfect_30',800,'Flawless Month','30 perfect days',function(s,d){ return perfectDaysCount()>=30; }],
+ ['rest_5',50,'Rest Easy','Use 5 rest days',function(s,d){ return d.restDays>=5; }],
+ ['level15',400,'Level 15','Reach level 15',function(s,d){ return d.level>=15; }],
+ ['level25',1000,'Level 25','Reach level 25',function(s,d){ return d.level>=25; }],
+ ['level40',2500,'Level 40','Reach level 40',function(s,d){ return d.level>=40; }],
+ ['allround5',400,'All-Rounder','Level 5 in every category',function(s,d){ return categoryDerived().every(function(c){ return c.level>=5; }); }],
+ ['xp_500',50,'First 500 XP','Earn 500 XP in total',function(s,d){ return d.xp>=500; }],
+ ['xp_5000',300,'XP Hoarder','Earn 5,000 XP in total',function(s,d){ return d.xp>=5000; }],
+ ['xp_25000',1000,'XP Titan','Earn 25,000 XP in total',function(s,d){ return d.xp>=25000; }],
+ ['active_7',50,'Showing Up','Be active on 7 different days',function(s,d){ return activeDaysCount()>=7; }],
+ ['active_30',200,'Regular','Be active on 30 different days',function(s,d){ return activeDaysCount()>=30; }],
+ ['active_100',600,'Dedicated','Be active on 100 different days',function(s,d){ return activeDaysCount()>=100; }],
+ ['active_365',2000,'Year Round','Be active on 365 different days',function(s,d){ return activeDaysCount()>=365; }],
+ ['task_10',60,'Ten Down','Complete 10 tasks',function(s,d){ return d.tasksCompleted>=10; }],
+ ['task_250',800,'Task Legend','Complete 250 tasks',function(s,d){ return d.tasksCompleted>=250; }],
+ ['hard_task',60,'Heavy Lifting','Finish a Hard (or higher) task',function(s,d){ return doneTaskTier(3); }],
+ ['epic_task',150,'Epic Win','Finish an Epic task',function(s,d){ return doneTaskTier(5); }],
+ ['on_time',150,'Right on Time','Finish 10 tasks by their deadline',function(s,d){ return tasksOnTime()>=10; }],
+ ['clean_slate',100,'Clean Slate','Have 5+ tasks and none left open',function(s,d){ return s.tasks.length>=5 && s.tasks.every(function(t){return t.done;}); }],
+ ['chal_10',50,'Warmed Up','Finish 10 challenges',function(s,d){ return d.challengesDone>=10; }],
+ ['chal_250',800,'Challenge Machine','Finish 250 challenges',function(s,d){ return d.challengesDone>=250; }],
+ ['chal_day5',60,'Busy Day','5 challenges in one day',function(s,d){ return chalDayStats().best>=5; }],
+ ['chal_day10',200,'Overdrive','10 challenges in one day',function(s,d){ return chalDayStats().best>=10; }],
+ ['chal_variety',60,'Variety Pack','3 different challenges in one day',function(s,d){ return chalDayStats().kinds>=3; }],
+ ['wheel_3',40,'Spin Cycle','Claim 3 wheel prizes',function(s,d){ return d.wheelsDone>=3; }],
+ ['wheel_100',800,'Wheel Legend','Claim 100 wheel prizes',function(s,d){ return d.wheelsDone>=100; }],
+ ['earn_100',100,'Earner','Earn $100 in coins overall',function(s,d){ return lifetimeEarnedCents()>=10000; }],
+ ['earn_500',400,'Big Earner','Earn $500 in coins overall',function(s,d){ return lifetimeEarnedCents()>=50000; }],
+ ['earn_1000',800,'Coin Baron','Earn $1,000 in coins overall',function(s,d){ return lifetimeEarnedCents()>=100000; }],
+ ['spent_50',50,'Big Spender','Spend $50 in total',function(s,d){ return totalSpentCents()>=5000; }]
+].forEach(function(a){ ACHIEVEMENTS.push({ id:a[0], coin:a[1], name:a[2], desc:a[3], check:a[4] }); });
+var STICKY_ACH=['piggy_bank','stash','vault','treat_yourself','spent_50'];
+function achTier(a){
+  if(a.id==='vault') return 'epic';
+  var c=a.coin||0;
+  return c<=30?'tiny':c<=60?'easy':c<=250?'medium':c<=500?'hard':c<=1000?'intense':'epic';
+}
+function tierTag(id){ var t=tierInfo(id); return '<span class="diff-tag diff-'+t.id+'">'+t.label+'</span>'; }
 
 /* =====================================================================
    STATE (module-level)
@@ -823,6 +933,19 @@ function grantRetroAchievementCoins(){
   });
   return total;
 }
+function reconcileAchievements(all){
+  var t=todayKey(), lost=[];
+  state.achievements=(state.achievements||[]).filter(function(u){
+    var a=ACHIEVEMENTS.filter(function(x){ return x.id===u.id; })[0];
+    if(!a || STICKY_ACH.indexOf(u.id)!==-1) return true;
+    if(!all && u.unlockedAt!==t) return true;
+    if(all && u.id==='perfect_day') return true;
+    if(a.check(state,computeDerived())) return true;
+    revokeCoins(u.coins||0,u.unlockedAt); lost.push(a.name); return false;
+  });
+  if(lost.length) queueToast('Achievement removed: '+lost[0]+(lost.length>1?' +'+(lost.length-1)+' more':'')+' \u2014 no longer earned');
+  return lost.length;
+}
 function checkAchievements(){
   var retro=grantRetroAchievementCoins();
   if(retro>0) queueToast('Achievement bonus: +'+fmtMoney(retro)+' for achievements you already earned');
@@ -876,7 +999,7 @@ function luckyRoll(id,dk){
 }
 function tierSelectHtml(id,name,sel){
   var h='<select id="'+id+'" name="'+name+'">';
-  TIERS.forEach(function(t){ h+='<option value="'+t.id+'" '+(t.id===sel?'selected':'')+'>'+t.label+' \u00b7 '+((state.settings.difficultyPoints&&state.settings.difficultyPoints[t.id])||t.pts)+' xp</option>'; });
+  TIERS.forEach(function(t){ h+='<option value="'+t.id+'" '+(t.id===sel?'selected':'')+'>'+t.label+'</option>'; });
   return h+'</select>';
 }
 function coinTierFieldsHtml(){
@@ -986,7 +1109,7 @@ function logChallenge(id){
   var newAch=checkAchievements();
   var la=computeDerived().level;
   buzz(15);
-  if(la>lb) queueLevelUpToast(la); else if(!newAch.length) queueToast('+'+cpts+' xp'+(coins?' \u00b7 +'+fmtMoney(coins):''));
+  if(la>lb) queueLevelUpToast(la); else if(!newAch.length) queueToast(tierInfo(c.tier||nearestTier(c.points)).label.toUpperCase()+(coins?' \u00b7 +'+fmtMoney(coins):''));
   persist(); render();
 }
 function undoChallenge(id){
@@ -995,6 +1118,7 @@ function undoChallenge(id){
     var l=state.challengeLogs[i];
     if(l.challengeId===id && l.dateKey===t){ revokeCoins(l.coins,t); state.challengeLogs.splice(i,1); break; }
   }
+  reconcileAchievements(false);
   persist(); render();
 }
 function deleteChallenge(id){
@@ -1026,7 +1150,7 @@ function claimWheel(){
   state.wheelLog.push({ id:uid(), dateKey:todayKey(), name:w.mission, points:w.points, coins:coins });
   var newAch=checkAchievements();
   var la=computeDerived().level;
-  if(la>lb) queueLevelUpToast(la); else if(!newAch.length) queueToast('Wheel prize! +'+w.points+' xp'+(coins?' \u00b7 +'+fmtMoney(coins):''));
+  if(la>lb) queueLevelUpToast(la); else if(!newAch.length) queueToast('Wheel prize! '+tierInfo(nearestTier(w.points)).label.toUpperCase()+(coins?' \u00b7 +'+fmtMoney(coins):''));
   persist(); render();
 }
 function wheelSvg(){
@@ -1076,12 +1200,12 @@ function toggleHabitDay(habitId,dateKey){
   if(compareKeys(dateKey,todayKey())>0) return;
   if(compareKeys(dateKey,habit.createdAt)<0) return;
   var levelBefore=computeDerived().level;
-  var lucky=false, bonus=0, coinGot=0;
+  var lucky=false, bonus=0, coinGot=0, undone=false;
   if(habit.completions.hasOwnProperty(dateKey)){
     if(!habit.coins) habit.coins={};
     revokeCoins(habit.coins[dateKey]||0,dateKey); delete habit.coins[dateKey];
     if(habit.lucky && habit.lucky[dateKey]){ delete habit.lucky[dateKey]; state.luckyBonusCount=Math.max(0,(state.luckyBonusCount||0)-1); }
-    delete habit.completions[dateKey];
+    delete habit.completions[dateKey]; undone=true;
   } else {
     var streak=streakEndingAt(habit,dateKey);
     var mult=streakMultiplier(streak);
@@ -1101,6 +1225,7 @@ function toggleHabitDay(habitId,dateKey){
     if(!habit.coins) habit.coins={};
     habit.coins[dateKey]=coinGot;
   }
+  if(undone) reconcileAchievements(false);
   var newAch=checkAchievements();
   var levelAfter=computeDerived().level;
   if(levelAfter>levelBefore) queueLevelUpToast(levelAfter);
@@ -1126,6 +1251,7 @@ function cancelRestDay(habitId){
   var mine=(habit.freezes||[]).filter(function(k){ return weekKeyFor(k)===wk; }).sort(compareKeys);
   if(!mine.length) return;
   habit.freezes=habit.freezes.filter(function(k){ return k!==mine[mine.length-1]; });
+  reconcileAchievements(false);
   persist(); render();
 }
 function archiveHabit(habitId){
@@ -1179,7 +1305,7 @@ function addTask(name,tier,deadline){
 function toggleTask(taskId){
   var task=(state.tasks||[]).filter(function(t){ return t.id===taskId; })[0];
   if(!task) return;
-  var levelBefore=computeDerived().level;
+  var levelBefore=computeDerived().level, wasDone=task.done;
   if(task.done){
     revokeCoins(task.coinsAwarded||0,task.completedAt); task.coinsAwarded=0;
     task.done=false; task.completedAt=null; task.pointsAwarded=0;
@@ -1190,6 +1316,7 @@ function toggleTask(taskId){
     task.coinsAwarded=awardCoins(tierCoin(task.tier),task.completedAt);
     ui.pop='t|'+task.id; buzz(18);
   }
+  if(wasDone) reconcileAchievements(false);
   checkAchievements();
   var levelAfter=computeDerived().level;
   if(levelAfter>levelBefore) queueLevelUpToast(levelAfter);
@@ -1596,6 +1723,7 @@ var TABS=[
   {id:'tasks',label:'Tasks'},
   {id:'challenges',label:'Challenges'},
   {id:'wallet',label:'Coins'},
+  {id:'archive',label:'Archive'},
   {id:'stats',label:'Stats'}
 ];
 function renderTabs(){
@@ -1636,7 +1764,7 @@ function renderToday(glance){
           '<button class="check-circle'+(isDone?' done':'')+(isRest?' rest':'')+(ui.pop===h.id+'|'+t?' pop':'')+'" data-action="toggle-habit" data-habit="'+h.id+'" data-date="'+t+'" aria-label="Mark '+esc(h.name)+' done">'+checkIconSvg()+'</button>'+
           '<div><div>'+esc(h.name)+'</div><div class="habit-meta">'+(isRest?'Rest day \u00b7 streak safe':(streak>0?streak+'-day streak':'no streak yet'))+'</div></div>'+
         '</div>'+
-        '<span class="diff-tag diff-'+h.difficulty+'">'+h.difficulty+'</span>'+
+        '<div class="row">'+tierTag(h.difficulty)+'<button class="icon-btn edit-pen" data-action="quick-edit" data-kind="habit" data-id="'+h.id+'" aria-label="Edit '+esc(h.name)+'">\u270E</button></div>'+
       '</div>';
     });
     habitsInner+='</div>';
@@ -1655,24 +1783,54 @@ function renderToday(glance){
     openTasks.forEach(function(task){
       tasksInner+='<div class="row-between">'+
         '<div class="row"><button class="check-circle'+(ui.pop==='t|'+task.id?' pop':'')+'" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><div><div>'+esc(task.name)+'</div>'+dueHtml(task)+'</div></div>'+
-        '<span class="faint c-gold">+'+taskXp(task)+'</span>'+
+        '<div class="row">'+tierTag(task.tier||nearestTier(task.points))+'<button class="icon-btn edit-pen" data-action="quick-edit" data-kind="task" data-id="'+task.id+'" aria-label="Edit">\u270E</button></div>'+
       '</div>';
     });
     tasksInner+='</div>';
     if(allOpen.length>openTasks.length) tasksInner+='<div class="faint" style="margin-top:10px;">+ '+(allOpen.length-openTasks.length)+' more in the Tasks tab</div>';
   }
 
-  var html='';
-  if(glance){
-    html+=card('Tasks',tasksInner)+card('Habits',habitsInner);
-  } else {
-    var chalToday=state.challengeLogs.filter(function(l){ return l.dateKey===t; }).length;
-    var w=wheelToday();
-    var hint=w?(w.status==='pending'?'Wheel mission waiting':'Wheel done'):'Wheel ready to spin';
-    var chalInner='<div class="link-row"><div><h2 class="section-title" style="margin:0 0 2px;">Challenges</h2><div class="habit-meta">'+chalToday+' done today \u00b7 '+hint+'</div></div><button class="btn btn-sm" data-action="set-tab" data-tab="challenges">Open</button></div>';
-    html+=card('Habits',habitsInner)+card('Tasks',tasksInner)+card(null,chalInner);
-  }
+  var chalToday=state.challengeLogs.filter(function(l){ return l.dateKey===t; }).length;
+  var head='<div class="row-between today-head"><div><div class="today-date">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+'</div><div class="faint">'+doneCount+' of '+todoHabits.length+' habits \u00b7 '+chalToday+' challenges \u00b7 '+(state.tasks||[]).filter(function(x){return x.done&&x.completedAt===t;}).length+' tasks done</div></div>'+(glance?'':'<button class="btn btn-sm btn-ghost" data-action="open-glance">Compact view</button>')+'</div>';
+  var html=(glance?'':head)+card('Habits',habitsInner)+card('Challenges',renderTodayChallenges())+card('Tasks',tasksInner);
   return html;
+}
+function renderTodayChallenges(){
+  var inner='<div class="row-between" style="margin-bottom:10px;"><h2 class="section-title" style="margin:0;">Challenges</h2><span class="faint">tap + to log</span></div>';
+  if(!state.challenges.length) inner+='<div class="empty">No challenges yet. Add some in the Challenges tab.</div>';
+  else{
+    inner+='<div class="stack">';
+    state.challenges.forEach(function(c){
+      var n=challengeCountToday(c.id), atLimit=c.limit>0 && n>=c.limit;
+      inner+='<div class="row-between"><div style="min-width:0;"><div>'+esc(c.name)+'</div><div class="habit-meta">today '+n+(c.limit>0?' / '+c.limit:'')+'</div></div>'+
+        '<div class="row">'+tierTag(c.tier)+'<button class="icon-btn edit-pen" data-action="quick-edit" data-kind="challenge" data-id="'+c.id+'" aria-label="Edit">\u270E</button>'+(n>0?'<button class="icon-btn" data-action="undo-challenge" data-id="'+c.id+'" aria-label="Undo one">\u2212</button>':'')+
+        '<button class="add-circle'+(atLimit?' maxed':'')+'" data-action="log-challenge" data-id="'+c.id+'" '+(atLimit?'disabled':'')+' aria-label="Log '+esc(c.name)+'">'+(atLimit?checkIconSvg():'+')+'</button></div></div>';
+    });
+    inner+='</div>';
+  }
+  var w=wheelToday();
+  inner+='<div class="divider"></div><div class="row-between"><div><div style="font-size:14px;">Daily wheel</div><div class="habit-meta">'+(!w?'Ready to spin':(w.status==='pending'?esc(w.mission):'\u2713 Prize claimed'))+'</div></div>'+
+    (!w?'<button class="btn btn-sm" data-action="set-tab" data-tab="challenges">Spin</button>':(w.status==='pending'?'<button class="btn btn-sage btn-sm" data-action="claim-wheel">Claim</button>':''))+'</div>';
+  return inner;
+}
+function fmtFull(k){ if(!k) return '?'; var d=parseDateKey(k); return formatDateHuman(k)+(d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():''); }
+function daysBetween(a,b){ return Math.round((parseDateKey(b)-parseDateKey(a))/86400000); }
+function renderArchive(){
+  var done=(state.tasks||[]).filter(function(x){ return x.done; }).sort(function(a,b){ return compareKeys(b.completedAt||'',a.completedAt||''); });
+  var tot=0, cnt=0, mk=todayMonthKey(), month=0;
+  done.forEach(function(x){ if(x.createdAt&&x.completedAt){ tot+=daysBetween(x.createdAt,x.completedAt); cnt++; } if((x.completedAt||'').slice(0,7)===mk) month++; });
+  var inner='<h2 class="section-title" style="margin-bottom:4px;">Task archive</h2><div class="faint" style="margin-bottom:12px;">Every finished task is kept here for good, with the day you added it and the day you finished it.</div>'+
+    '<div class="totals-grid" style="margin-bottom:14px;"><div class="totals-cell"><div class="totals-val">'+done.length+'</div><div class="totals-label">Finished</div></div><div class="totals-cell"><div class="totals-val">'+month+'</div><div class="totals-label">This month</div></div><div class="totals-cell"><div class="totals-val">'+(cnt?(tot/cnt).toFixed(1):'0')+'d</div><div class="totals-label">Avg. time to finish</div></div></div>';
+  if(!done.length) inner+='<div class="empty">Nothing finished yet. Completed tasks will show up here.</div>';
+  else{
+    var last=null;
+    done.forEach(function(x){
+      if(x.completedAt!==last){ last=x.completedAt; inner+='<div class="arch-day">'+fmtFull(x.completedAt)+'</div>'; }
+      var took=(x.createdAt&&x.completedAt)?daysBetween(x.createdAt,x.completedAt):null;
+      inner+='<div class="arch-row"><div style="min-width:0;"><div>'+esc(x.name)+'</div><div class="habit-meta">Added '+fmtFull(x.createdAt)+' \u00b7 Finished '+fmtFull(x.completedAt)+(took!==null?' \u00b7 '+(took===0?'same day':took+(took===1?' day':' days')):'')+'</div></div><div class="row">'+tierTag(x.tier||nearestTier(x.points))+(x.completedAt===todayKey()?'<button class="icon-btn" data-action="toggle-task" data-task="'+x.id+'">Reopen</button>':'')+'</div></div>';
+    });
+  }
+  return card(null,inner);
 }
 function renderWheelCard(){
   var w=wheelToday(), inner;
@@ -1684,7 +1842,7 @@ function renderWheelCard(){
   } else if(w.status==='pending'){
     inner='<h2 class="section-title" style="margin-bottom:6px;">Wheel mission</h2>'+
       '<div style="font-size:16px;margin-bottom:4px;">'+esc(w.mission)+'</div>'+
-      '<div class="faint c-gold" style="margin-bottom:12px;">Prize: +'+w.points+' xp'+(w.coins?' \u00b7 +'+fmtMoney(w.coins):'')+'</div>'+
+      '<div class="faint c-gold" style="margin-bottom:12px;">Prize: '+tierTag(nearestTier(w.points))+(w.coins?' \u00b7 +'+fmtMoney(w.coins):'')+'</div>'+
       '<button class="btn btn-sage btn-block" data-action="claim-wheel">Done \u2014 claim prize</button>';
   } else {
     inner='<h2 class="section-title" style="margin-bottom:6px;">Wheel mission</h2>'+
@@ -1714,7 +1872,7 @@ function renderChallengesTab(){
         return;
       }
       inner+='<div class="chal-row"><div style="min-width:0;"><div>'+esc(c.name)+'</div>'+
-        '<div class="chal-meta"><span class="chip chip-gold">+'+tierPts(c.tier)+' xp</span><span class="chip">today '+n+(c.limit>0?' / '+c.limit:'')+'</span><span class="chip">all time '+total+'</span></div>'+
+        '<div class="chal-meta">'+tierTag(c.tier)+'<span class="chip">today '+n+(c.limit>0?' / '+c.limit:'')+'</span><span class="chip">all time '+total+'</span></div>'+
         '<div class="row" style="margin-top:8px;"><button class="icon-btn" data-action="edit-challenge" data-id="'+c.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="challenge" data-id="'+c.id+'">Remove</button>'+
         '<div class="reorder-col"><button class="reorder-btn" data-action="move-challenge-up" data-id="'+c.id+'" '+(idx===0?'disabled':'')+' aria-label="Move up">&#9650;</button><button class="reorder-btn" data-action="move-challenge-down" data-id="'+c.id+'" '+(idx===state.challenges.length-1?'disabled':'')+' aria-label="Move down">&#9660;</button></div></div></div>'+
         '<div class="row">'+(n>0?'<button class="btn btn-ghost btn-sm" data-action="undo-challenge" data-id="'+c.id+'">Undo</button>':'')+
@@ -1828,6 +1986,7 @@ function renderHabits(){
           '</div>'+
           '<div class="row">'+
             '<span class="cat-tag" style="color:'+catInfo.color+';">'+catInfo.label+'</span>'+
+            '<button class="icon-btn edit-pen" data-action="quick-edit" data-kind="habit" data-id="'+h.id+'" aria-label="Edit">\u270E</button>'+
             '<span class="diff-tag diff-'+h.difficulty+'">'+h.difficulty+'</span>'+
             '<div class="reorder-col">'+
               '<button class="reorder-btn" data-action="move-habit-up" data-habit="'+h.id+'" '+(idx===0?'disabled':'')+' aria-label="Move up">&#9650;</button>'+
@@ -1948,7 +2107,7 @@ function renderTasks(){
       } else {
         openInner+='<div class="row-between">'+
           '<div class="row"><button class="check-circle'+(ui.pop==='t|'+task.id?' pop':'')+'" data-action="toggle-task" data-task="'+task.id+'" aria-label="Complete '+esc(task.name)+'">'+checkIconSvg()+'</button><div><div>'+esc(task.name)+'</div>'+dueHtml(task)+'</div></div>'+
-          '<div class="row"><span class="faint c-gold">+'+taskXp(task)+'</span><button class="icon-btn" data-action="edit-task" data-task="'+task.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="task" data-id="'+task.id+'">Remove</button></div>'+
+          '<div class="row">'+tierTag(task.tier||nearestTier(task.points))+'<button class="icon-btn" data-action="edit-task" data-task="'+task.id+'">Edit</button><button class="icon-btn" data-action="ask-delete" data-kind="task" data-id="'+task.id+'">Remove</button></div>'+
         '</div>';
       }
     });
@@ -1961,7 +2120,7 @@ function renderTasks(){
     done.forEach(function(task){
       doneInner+='<div class="row-between"><div class="row"><button class="check-circle done" data-action="toggle-task" data-task="'+task.id+'" aria-label="Undo '+esc(task.name)+'">'+checkIconSvg()+'</button><span class="muted">'+esc(task.name)+'</span></div><span class="faint">'+formatDateHuman(task.completedAt)+'</span></div>';
     });
-    doneInner+='</div>';
+    doneInner+='</div><button class="btn btn-ghost btn-sm" style="margin-top:12px;" data-action="set-tab" data-tab="archive">Full archive</button>';
     html+=card(null,doneInner);
   }
   return html;
@@ -2087,9 +2246,9 @@ function renderStats(){
   var unlockedIds=(state.achievements||[]).map(function(a){return a.id;});
   ACHIEVEMENTS.forEach(function(a){
     var isUnlocked=unlockedIds.indexOf(a.id)!==-1;
-    achvInner+='<div class="achv'+(isUnlocked?'':' locked')+'"><div class="achv-name">'+a.name+'</div><div class="faint">'+a.desc+'</div>'+(a.coin?'<div class="faint c-gold" style="margin-top:4px;">'+(isUnlocked?'\u2713 ':'')+'+'+fmtMoney(a.coin)+'</div>':'')+'</div>';
+    achvInner+='<div class="achv'+(isUnlocked?'':' locked')+'"><div class="achv-name">'+a.name+'</div><div class="faint">'+a.desc+'</div>'+'<div style="margin-top:6px;">'+tierTag(achTier(a))+(isUnlocked?' <span class="faint c-sage">\u2713 earned</span>':'')+'</div>'+'</div>';
   });
-  achvInner+='</div>';
+  achvInner+='</div><button class="btn btn-ghost btn-sm" style="margin-top:12px;" data-action="recheck-ach">Re-check achievements</button>';
   html+=card(null,achvInner);
 
   var d=computeDerived();
@@ -2286,6 +2445,7 @@ function renderTabContent(){
     case 'wallet': return renderWallet();
     case 'shop': return renderWallet();
     case 'pctime': return renderPCTime();
+    case 'archive': return renderArchive();
     case 'stats': return renderStats();
     case 'settings': return renderSettings();
     default: return '';
@@ -2354,6 +2514,15 @@ function onClick(e){
     case 'cal-next': if(ui.calMonthOffset<0){ui.calMonthOffset++; render();} break;
     case 'use-rest': useRestDay(el.getAttribute('data-habit'),parseInt(el.getAttribute('data-offset'),10)||0); break;
     case 'cancel-rest': cancelRestDay(el.getAttribute('data-habit')); break;
+    case 'quick-edit':
+      var qk=el.getAttribute('data-kind'), qi=el.getAttribute('data-id');
+      ui.editingHabitId=null; ui.editingTaskId=null; ui.editingChallengeId=null; ui.expandedHabitId=null;
+      if(qk==='habit'){ ui.activeTab='habits'; ui.expandedHabitId=qi; ui.editingHabitId=qi; }
+      else if(qk==='task'){ ui.activeTab='tasks'; ui.editingTaskId=qi; }
+      else if(qk==='challenge'){ ui.activeTab='challenges'; ui.editingChallengeId=qi; }
+      ui.fade=true; try{ window.scrollTo(0,0); }catch(err){}
+      render(); break;
+    case 'recheck-ach': if(!reconcileAchievements(true)) queueToast('All achievements check out'); persist(); render(); break;
     case 'undo-spend': undoSpend(el.getAttribute('data-id')); break;
     case 'edit-challenge': ui.editingChallengeId=el.getAttribute('data-id'); render(); break;
     case 'cancel-edit-challenge': ui.editingChallengeId=null; render(); break;
